@@ -1,4 +1,6 @@
 require("dotenv").config();
+require("reflect-metadata");
+
 import express from "express";
 import session from "express-session";
 import redis from "redis";
