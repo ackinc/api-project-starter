@@ -1,10 +1,12 @@
 require("dotenv").config();
-const express = require("express");
-const session = require("express-session");
-const redis = require("redis");
+import express from "express";
+import session from "express-session";
+import redis from "redis";
 const RedisStore = require("connect-redis")(session);
 
 const { COOKIE_SECRET, NODE_ENV, PORT, REDIS_URL } = process.env;
+if (!COOKIE_SECRET) throw new Error("No COOKIE_SECRET in env");
+if (!REDIS_URL) throw new Error("No REDIS_URL in env");
 
 const app = express();
 if (NODE_ENV !== "development") {
@@ -23,7 +25,7 @@ app.use(
     },
     resave: false,
     saveUninitialized: true,
-    secret: COOKIE_SECRET,
+    secret: COOKIE_SECRET.split(","),
     store: new RedisStore({ client: redisClient }),
     rolling: true,
   })

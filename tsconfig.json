@@ -1,8 +1,8 @@
 {
+  "extends": "@tsconfig/node12/tsconfig.json",
   "compilerOptions": {
     "outDir": "./built",
     "allowJs": false,
-    "target": "es5"
   },
   "include": ["./src/**/*"]
 }
