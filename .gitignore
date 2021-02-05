@@ -1,3 +1,6 @@
+# Redis dumps
+dump.rdb
+
 # Logs
 logs
 *.log
