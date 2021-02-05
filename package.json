@@ -5,6 +5,13 @@
   "repository": "git@github.com:AppliedEnglish/api.git",
   "author": "Anirudh Nimmagadda <anirudh.nimmagadda@gmail.com>",
   "scripts": {
+    "dev": "nodemon server.js",
     "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
   }
 }
