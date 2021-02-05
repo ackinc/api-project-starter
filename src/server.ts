@@ -17,7 +17,7 @@ app.use(
     name: "ae-sid",
     cookie: {
       httpOnly: true,
-      maxAge: 100 * 365 * 86400 * 1000, // persists a 100 years
+      maxAge: 7 * 365 * 86400 * 1000, // persists a week
       secure: NODE_ENV !== "development",
       sameSite: NODE_ENV !== "development" ? "none" : "strict",
     },
@@ -25,6 +25,7 @@ app.use(
     saveUninitialized: true,
     secret: COOKIE_SECRET,
     store: new RedisStore({ client: redisClient }),
+    rolling: true,
   })
 );
 

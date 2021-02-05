@@ -1,3 +1,7 @@
+# Transpiled code
+built/*
+!built/.keep
+
 # Redis dumps
 dump.rdb
 
