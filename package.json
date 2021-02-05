@@ -1,0 +1,10 @@
+{
+  "name": "api",
+  "version": "0.0.1",
+  "main": "index.js",
+  "repository": "git@github.com:AppliedEnglish/api.git",
+  "author": "Anirudh Nimmagadda <anirudh.nimmagadda@gmail.com>",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
