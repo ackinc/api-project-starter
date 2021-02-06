@@ -90,6 +90,16 @@
     "@types/connect" "*"
     "@types/node" "*"
 
+"@types/connect-redis@^0.0.16":
+  version "0.0.16"
+  resolved "https://registry.yarnpkg.com/@types/connect-redis/-/connect-redis-0.0.16.tgz#fd98a26ffbe6ac3037baa4aecc940951b9f78cdc"
+  integrity sha512-ToZRmwoeqRhzGIqMO9k8Hs1B9pFSGYCjHvMpPlgo+kQ4M7xaPwi2/5HjikJ0MOfPDFcAe9Qwl1SaULYCNE6jYg==
+  dependencies:
+    "@types/express" "*"
+    "@types/express-session" "*"
+    "@types/ioredis" "*"
+    "@types/redis" "*"
+
 "@types/connect@*":
   version "3.4.34"
   resolved "https://registry.yarnpkg.com/@types/connect/-/connect-3.4.34.tgz#170a40223a6d666006d93ca128af2beb1d9b1901"
@@ -106,7 +116,7 @@
     "@types/qs" "*"
     "@types/range-parser" "*"
 
-"@types/express-session@^1.17.3":
+"@types/express-session@*", "@types/express-session@^1.17.3":
   version "1.17.3"
   resolved "https://registry.yarnpkg.com/@types/express-session/-/express-session-1.17.3.tgz#4a37c5c4428b8f922ac8ac1cb4bd9190a4d2b097"
   integrity sha512-57DnyxiqClXOIjoCgeKCUYfKxBPOlOY/k+l1TPK+7bSwyiPTrS5FIk1Ycql7twk4wO7P5lfOVy6akDGiaMSLfw==
@@ -122,6 +132,13 @@
     "@types/express-serve-static-core" "^4.17.18"
     "@types/qs" "*"
     "@types/serve-static" "*"
+
+"@types/ioredis@*":
+  version "4.19.3"
+  resolved "https://registry.yarnpkg.com/@types/ioredis/-/ioredis-4.19.3.tgz#577548fbd03200ef92a81fd745899316c6f28917"
+  integrity sha512-r9rXLYeZVmvTf0nKDmFYrpBeVzK5B6jgE2ncfkzPOAuRM5RTzKnYdW2wVn+ZONMnFxV6H4R3NrCdRdC3CL4nFA==
+  dependencies:
+    "@types/node" "*"
 
 "@types/json-schema@^7.0.3":
   version "7.0.7"
@@ -148,7 +165,7 @@
   resolved "https://registry.yarnpkg.com/@types/range-parser/-/range-parser-1.2.3.tgz#7ee330ba7caafb98090bece86a5ee44115904c2c"
   integrity sha512-ewFXqrQHlFsgc09MK5jP5iR7vumV/BYayNC6PgJO2LPe8vrnNFyjQjSppfEngITi0qvfKtzFvgKymGheFM9UOA==
 
-"@types/redis@^2.8.28":
+"@types/redis@*", "@types/redis@^2.8.28":
   version "2.8.28"
   resolved "https://registry.yarnpkg.com/@types/redis/-/redis-2.8.28.tgz#5862b2b64aa7f7cbc76dafd7e6f06992b52c55e3"
   integrity sha512-8l2gr2OQ969ypa7hFOeKqtFoY70XkHxISV0pAwmQ2nm6CSPb1brmTmqJCGGrekCo+pAZyWlNXr+Kvo6L/1wijA==

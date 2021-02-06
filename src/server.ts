@@ -1,10 +1,14 @@
-require("dotenv").config();
-require("reflect-metadata");
+import dotenv from "dotenv";
+dotenv.config();
+
+import "reflect-metadata";
 
 import express from "express";
 import session from "express-session";
 import redis from "redis";
-const RedisStore = require("connect-redis")(session);
+import connectRedis from "connect-redis";
+
+const RedisStore = connectRedis(session);
 
 const { COOKIE_SECRET, NODE_ENV, PORT, REDIS_URL } = process.env;
 if (!COOKIE_SECRET) throw new Error("No COOKIE_SECRET in env");
