@@ -39,4 +39,4 @@ app.use(
 
 app.get("/", (req, res) => res.end("OK"));
 
-app.listen(PORT, () => console.log("Server running"));
+app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
