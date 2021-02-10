@@ -1,0 +1,25 @@
+services:
+  db:
+    container_name: ae-postgres
+    image: postgres:13.1
+    environment:
+      POSTGRES_USER: applied_english_user
+      POSTGRES_PASSWORD: ypc8y4wk725d
+      POSTGRES_DB: applied_english
+    ports:
+      - "5432:5432"
+    volumes:
+      - ae-db-dev-data:/var/lib/postgresql/data
+  redis:
+    container_name: ae-redis
+    image: redis:6.0.10
+    ports:
+      - "6379:6379"
+    volumes:
+      - ae-redis-dev-data:/data
+
+volumes:
+  ae-db-dev-data:
+    name: ae-db-dev-data
+  ae-redis-dev-data:
+    name: ae-redis-dev-data
