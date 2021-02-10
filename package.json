@@ -7,7 +7,7 @@
   "scripts": {
     "build:watch": "tsc --watch",
     "build": "tsc",
-    "clean": "rm -r built/*",
+    "clean": "rm -r built/* && touch built/.keep",
     "dev": "yarn build:watch & NODE_ENV=development nodemon built/server.js",
     "prestart": "yarn build",
     "start": "node built/server.js"
