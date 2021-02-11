@@ -29,6 +29,7 @@ if (NODE_ENV !== "development") {
 app.use(
   cors({
     origin: ALLOWED_ORIGINS?.split(","),
+    credentials: true,
   })
 );
 
