@@ -38,7 +38,7 @@ app.use(
     name: "ae-sid",
     cookie: {
       httpOnly: true,
-      maxAge: 7 * 365 * 86400 * 1000, // persists a week
+      maxAge: 7 * 86400 * 1000, // persists a week
       secure: NODE_ENV !== "development",
       sameSite: NODE_ENV !== "development" ? "none" : "strict",
     },
