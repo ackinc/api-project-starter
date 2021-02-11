@@ -3,6 +3,7 @@ dotenv.config();
 
 import "reflect-metadata";
 
+import cors from "cors";
 import express from "express";
 import session from "express-session";
 import redis from "redis";
@@ -10,7 +11,13 @@ import connectRedis from "connect-redis";
 
 const RedisStore = connectRedis(session);
 
-const { COOKIE_SECRET, NODE_ENV, PORT, REDIS_URL } = process.env;
+const {
+  ALLOWED_ORIGINS,
+  COOKIE_SECRET,
+  NODE_ENV,
+  PORT,
+  REDIS_URL,
+} = process.env;
 if (!COOKIE_SECRET) throw new Error("No COOKIE_SECRET in env");
 if (!REDIS_URL) throw new Error("No REDIS_URL in env");
 
@@ -18,6 +25,12 @@ const app = express();
 if (NODE_ENV !== "development") {
   app.set("trust proxy", 1);
 }
+
+app.use(
+  cors({
+    origin: ALLOWED_ORIGINS?.split(","),
+  })
+);
 
 const redisClient = redis.createClient(REDIS_URL);
 app.use(
