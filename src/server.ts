@@ -50,6 +50,8 @@ app.use(
   })
 );
 
+app.use(express.json());
+
 app.use(
   session({
     name: "ae-sid",
