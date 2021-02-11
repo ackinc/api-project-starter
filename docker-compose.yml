@@ -17,9 +17,22 @@ services:
       - "6379:6379"
     volumes:
       - ae-redis-dev-data:/data
+  pgadmin4:
+    container_name: ae-pgadmin4
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@localhost
+      PGADMIN_DEFAULT_PASSWORD: 2jfk6dw7e4f3
+      PGADMIN_DISABLE_POSTFIX: 1
+    ports:
+      - "5433:80"
+    volumes:
+      - ae-pgadmin4-dev-data:/var/lib/pgadmin
 
 volumes:
   ae-db-dev-data:
     name: ae-db-dev-data
   ae-redis-dev-data:
     name: ae-redis-dev-data
+  ae-pgadmin4-dev-data:
+    name: ae-pgadmin4-dev-data
