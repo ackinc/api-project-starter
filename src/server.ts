@@ -6,31 +6,25 @@ const {
   DATABASE_URL,
   NODE_ENV = "development",
   PORT = 3000,
-  REDIS_URL,
 } = process.env;
 if (!ALLOWED_ORIGINS) console.warn("Warning: No ALLOWED_ORIGINS in env");
 if (!COOKIE_SECRET) throw new Error("No COOKIE_SECRET in env");
 if (!DATABASE_URL) throw new Error("Missing DATABASE_URL in env");
-if (!REDIS_URL) throw new Error("No REDIS_URL in env");
 
 import "reflect-metadata";
 
 import cors from "cors";
 import express from "express";
 import session from "express-session";
-import redis from "redis";
 import connectRedis from "connect-redis";
 import { createConnection as createDbConnection } from "typeorm";
 
+import authRouter from "./auth/auth.routes";
+import { getClient as getRedisClient } from "./common/cache";
 import User from "./entities/User.entity";
 
-import authRouter from "./routes/auth.routes";
-
 const RedisStore = connectRedis(session);
-const redisClient = redis.createClient(REDIS_URL);
 
-// Note: not sure why type is required in the call below;
-//   Have asked a question in the typeorm slack
 createDbConnection({
   type: "postgres",
   url: DATABASE_URL,
@@ -64,7 +58,7 @@ app.use(
     resave: false,
     saveUninitialized: true,
     secret: COOKIE_SECRET.split(","),
-    store: new RedisStore({ client: redisClient }),
+    store: new RedisStore({ client: getRedisClient() }),
     rolling: true,
   })
 );
