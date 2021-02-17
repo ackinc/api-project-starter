@@ -30,6 +30,7 @@ createDbConnection({
   url: DATABASE_URL,
   entities: [User],
   synchronize: NODE_ENV === "development",
+  logging: NODE_ENV === "development",
 });
 
 const app = express();

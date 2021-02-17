@@ -11,13 +11,14 @@ const passwordSaltRounds = 12;
 const tokenLength = 30;
 
 export const signup: RequestHandler = async (req, res, next) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    res.status(400).json({ error: "EMAIL_OR_PASSWORD_MISSING" });
-    return;
-  }
-
+  const {
+    email,
+    firstName,
+    lastName,
+    password,
+    phone,
+    phoneCountryCode,
+  } = req.body;
   const hashedPassword = await bcrypt.hash(password, passwordSaltRounds);
 
   const userRepository = getRepository(User);
@@ -27,10 +28,25 @@ export const signup: RequestHandler = async (req, res, next) => {
     return;
   }
 
+  if (phone && phoneCountryCode) {
+    user = await userRepository.findOne({ phone, phoneCountryCode });
+    if (user) {
+      res.status(400).json({ error: "PHONE_TAKEN" });
+      return;
+    }
+  }
+
   user = new User();
+  user.firstName = firstName;
+  user.lastName = lastName;
   user.email = email;
   user.emailVerified = false;
   user.password = hashedPassword;
+  if (phone && phoneCountryCode) {
+    user.phone = phone;
+    user.phoneCountryCode = phoneCountryCode;
+    user.phoneVerified = false;
+  }
   user = await userRepository.save(user);
   next();
 };

@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Unique,
 } from "typeorm";
 
 // See https://github.com/typeorm/typeorm/issues/2797 to understand why
@@ -11,6 +12,7 @@ import {
 //   don't mention it
 
 @Entity("users")
+@Unique(["phoneCountryCode", "phone"])
 export default class User {
   @PrimaryGeneratedColumn()
   id: number | undefined;
@@ -27,7 +29,10 @@ export default class User {
   @Column({ type: "boolean", name: "email_verified", default: false })
   emailVerified: boolean | undefined;
 
-  @Column({ type: "varchar", unique: true, nullable: true })
+  @Column({ type: "varchar", nullable: true, name: "phone_country_code" })
+  phoneCountryCode: string | undefined;
+
+  @Column({ type: "varchar", nullable: true })
   phone: string | undefined;
 
   @Column({ type: "boolean", name: "phone_verified", default: false })
