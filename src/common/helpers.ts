@@ -40,3 +40,11 @@ export function getRandomString(
 
   return retval.join("");
 }
+
+export function toBase64(str: string): string {
+  return Buffer.from(str).toString("base64");
+}
+
+export function fromBase64(b64str: string): string {
+  return Buffer.from(b64str, "base64").toString();
+}

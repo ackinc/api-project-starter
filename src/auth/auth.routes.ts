@@ -5,12 +5,13 @@ import express from "express";
 import { body } from "express-validator";
 
 import { validateRequest } from "../common/handlers";
+import { minPasswordLength } from "../config";
 
 import {
   loginWithPassword,
   loginWithToken,
   logout,
-  sendVerificationEmail,
+  sendVerificationEmail_Handler,
   signup,
 } from "./auth.handlers";
 import { checkAuthenticated } from "../common/handlers";
@@ -19,38 +20,44 @@ const authRouter = express.Router();
 
 authRouter.post(
   "/signup",
-  body("email").isEmail(),
-  body("password").isLength({ min: 6 }),
+  body("firstName").exists(),
+  body("lastName").exists(),
+  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
+  body("password")
+    .isLength({ min: minPasswordLength })
+    .withMessage(`must be at least ${minPasswordLength} characters`),
   validateRequest,
-  signup,
-  sendVerificationEmail
+  signup
 );
 
+// TODO: support phone
 authRouter.post(
   "/send_email_verification_link",
-  body("redirectUrl").isURL(),
+  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
+  body("redirectUrl").optional().isURL(),
   validateRequest,
-  sendVerificationEmail
+  sendVerificationEmail_Handler
 );
 
+// TODO: support phone
 authRouter.post(
   "/send_password_reset_link",
+  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
   body("redirectUrl").isURL(),
   validateRequest,
-  sendVerificationEmail
+  sendVerificationEmail_Handler
+);
+
+// TODO: support phone
+authRouter.post(
+  "/login",
+  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
+  body("password").exists(),
+  validateRequest,
+  loginWithPassword
 );
 
 authRouter.post("/login/:b64data", loginWithToken);
-
-// verification email is only sent if user's email is unverified
-authRouter.post(
-  "/login",
-  body("email").isEmail(),
-  body("password"),
-  validateRequest,
-  loginWithPassword,
-  sendVerificationEmail
-);
 
 authRouter.post("/logout", checkAuthenticated, logout);
 
