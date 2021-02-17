@@ -1,9 +1,9 @@
 import redis, { RedisClient } from "redis";
 import { promisify } from "util";
 
-const { REDIS_URL } = process.env;
-if (!REDIS_URL) throw new Error("No REDIS_URL in env");
-const redisClient = redis.createClient(REDIS_URL);
+import { redisUrl } from "../config";
+
+const redisClient = redis.createClient(redisUrl);
 
 export const getClient = (): RedisClient => redisClient;
 export const set = promisify(redisClient.set.bind(redisClient));
