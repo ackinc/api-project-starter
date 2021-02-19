@@ -56,9 +56,6 @@ export const signup: RequestHandler = async (req, res, next) => {
   res.json({ message: "VERIFICATION_LINK_SENT" });
 
   sendVerificationEmail(user, frontendLocation);
-  if (phone && phoneCountryCode) {
-    // TODO: send verification SMS
-  }
 };
 
 export const sendVerificationEmail_Handler: RequestHandler = async (
