@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
+import validator from "validator";
 
 import { sendVerificationEmail, sendVerificationSMS } from "./auth.helpers";
 import * as cache from "../common/cache";
@@ -91,22 +92,34 @@ export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
   sendVerificationSMS(user);
 };
 
-// TODO: support login with phone and password
 export const loginWithPassword: RequestHandler = async (req, res) => {
-  const { email, password } = req.body;
+  const { emailOrPhone, phoneCountryCode, password } = req.body;
+  let email: string | undefined, phone: string | undefined;
+
+  if (validator.isEmail(emailOrPhone)) email = emailOrPhone as string;
+  else phone = emailOrPhone as string;
 
   const hashed = await bcrypt.hash(password, passwordSaltRounds);
 
   const userRepository = getRepository(User);
-  const user = await userRepository.findOne({ email, password: hashed });
+  const user = await userRepository.findOne({
+    ...(email ? { email } : { phone, phoneCountryCode }),
+    password: hashed,
+  });
   if (!user) {
     res.status(400).json({ error: "INVALID_CREDENTIALS" });
     return;
   }
 
-  if (!user.emailVerified) {
-    res.json({ message: "VERIFICATION_LINK_SENT" });
+  if (email && !user.emailVerified) {
+    res.json({ message: "VERIFICATION_EMAIL_SENT" });
     sendVerificationEmail(user, frontendLocation);
+    return;
+  }
+
+  if (phoneCountryCode && phone && !user.phoneVerified) {
+    res.json({ message: "VERIFICATION_SMS_SENT" });
+    sendVerificationSMS(user);
     return;
   }
 

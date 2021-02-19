@@ -55,10 +55,9 @@ authRouter.post(
   sendVerificationEmail_Handler
 );
 
-// TODO: support phone
 authRouter.post(
   "/login",
-  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
+  body("emailOrPhone").exists(),
   body("password").exists(),
   validateRequest,
   loginWithPassword
