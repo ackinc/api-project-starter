@@ -10,6 +10,7 @@
   "author": "Anirudh Nimmagadda <anirudh.nimmagadda@gmail.com>",
   "scripts": {
     "build:watch": "tsc --watch",
+    "prebuild": "yarn clean",
     "build": "tsc",
     "clean": "rm -r built/* && touch built/.keep",
     "dev": "yarn build:watch & nodemon built/server.js",
