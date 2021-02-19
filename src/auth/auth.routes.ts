@@ -12,6 +12,7 @@ import {
   loginWithToken,
   logout,
   sendVerificationEmail_Handler,
+  sendVerificationSMS_Handler,
   signup,
 } from "./auth.handlers";
 import { checkAuthenticated } from "../common/handlers";
@@ -30,7 +31,6 @@ authRouter.post(
   signup
 );
 
-// TODO: support phone
 authRouter.post(
   "/send_email_verification_link",
   body("email").isEmail().normalizeEmail({ all_lowercase: true }),
@@ -39,7 +39,14 @@ authRouter.post(
   sendVerificationEmail_Handler
 );
 
-// TODO: support phone
+authRouter.post(
+  "/send_phone_verification_code",
+  body("phoneCountryCode").exists(),
+  body("phone").exists(),
+  validateRequest,
+  sendVerificationSMS_Handler
+);
+
 authRouter.post(
   "/send_password_reset_link",
   body("email").isEmail().normalizeEmail({ all_lowercase: true }),

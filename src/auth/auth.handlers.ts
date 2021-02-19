@@ -114,26 +114,45 @@ export const loginWithPassword: RequestHandler = async (req, res) => {
   res.json({ message: "LOGIN_SUCCESSFUL" });
 };
 
-// TODO: support login with token from phone
 export const loginWithToken: RequestHandler = async (req, res) => {
   const { b64data } = req.params;
-  const [email, suppliedToken] = fromBase64(b64data).split("::");
+  const data = fromBase64(b64data).split("::");
 
-  const actualToken = await cache.get(`tokens:${email}`);
+  let email, phone, phoneCountryCode, suppliedToken;
+  if (data.length === 2) [email, suppliedToken] = data;
+  else if (data.length === 3) [phoneCountryCode, phone, suppliedToken] = data;
+  else {
+    res.status(400).json({ error: "TOKEN_INVALID_OR_EXPIRED" });
+    return;
+  }
+
+  const cacheKeySuffix = email || `${phoneCountryCode}${phone}`;
+  const cacheKey = `tokens:${cacheKeySuffix}`;
+  const actualToken = await cache.get(cacheKey);
   if (!actualToken || suppliedToken !== actualToken) {
     res.status(400).json({ error: "TOKEN_INVALID_OR_EXPIRED" });
     return;
   }
 
+  // TODO: Typescript should be able to see that the following
+  //   function call is valid, but it doesn't. Find out why.
+  await cache.del(cacheKey);
+
   const userRepository = getRepository(User);
-  const user = await userRepository.findOne({ email });
+  let user = await userRepository.findOne(
+    email ? { email } : { phoneCountryCode, phone }
+  );
   if (!user) {
     res.status(400).json({ message: "TOKEN_INVALID_OR_EXPIRED" });
     return;
   }
-  if (!user.emailVerified) {
+
+  if (email && !user.emailVerified) {
     user.emailVerified = true;
-    await userRepository.save(user);
+    user = await userRepository.save(user);
+  } else if (phone && phoneCountryCode && !user.phoneVerified) {
+    user.phoneVerified = true;
+    user = await userRepository.save(user);
   }
 
   req.session.user = user;
