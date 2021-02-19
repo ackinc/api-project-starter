@@ -23,7 +23,7 @@ authRouter.post(
   "/signup",
   body("firstName").exists(),
   body("lastName").exists(),
-  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
+  body("email").isEmail(),
   body("password")
     .isLength({ min: minPasswordLength })
     .withMessage(`must be at least ${minPasswordLength} characters`),

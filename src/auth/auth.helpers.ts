@@ -40,7 +40,7 @@ export async function sendVerificationEmail(
 }
 
 function createEmailVerificationToken() {
-  return getRandomString(emailVerificationTokenLength, { disallowed: ":" });
+  return getRandomString(emailVerificationTokenLength, { lowercase: true });
 }
 
 export async function sendVerificationSMS(user: User): Promise<void> {

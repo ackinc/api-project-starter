@@ -4,6 +4,7 @@ const digits = "0123456789";
 const symbols = `~\`!@#$%^&*()_-+={[}]|\\:;"'<,>.?/`;
 
 interface CharacterOptions {
+  all?: boolean;
   lowercase?: boolean;
   uppercase?: boolean;
   digits?: boolean;
@@ -20,6 +21,8 @@ export function getRandomString(
 
   if (options.allowed) {
     allowed = options.allowed;
+  } else if (options.all) {
+    allowed += lowercase + uppercase + digits + symbols;
   } else {
     if (options.lowercase) allowed += lowercase;
     if (options.uppercase) allowed += uppercase;
