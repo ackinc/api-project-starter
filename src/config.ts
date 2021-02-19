@@ -46,5 +46,6 @@ export const smtpUrl = SMTP_URL;
 export const emailVerificationTokenLength = 30;
 export const emailVerificationTokenExpiryMinutes = 15;
 export const phoneVerificationCodeExpiryMinutes = 15;
+export const phoneVerificationCodeLength = 6;
 export const minPasswordLength = 6;
 export const passwordSaltRounds = 12;

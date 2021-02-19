@@ -2,16 +2,10 @@ import bcrypt from "bcrypt";
 import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
 
+import { sendVerificationEmail, sendVerificationSMS } from "./auth.helpers";
 import * as cache from "../common/cache";
-import emailer from "../common/emailer";
-import { getRandomString, fromBase64, toBase64 } from "../common/helpers";
-import {
-  apiLocation,
-  emailVerificationTokenExpiryMinutes,
-  emailVerificationTokenLength,
-  frontendLocation,
-  passwordSaltRounds,
-} from "../config";
+import { fromBase64 } from "../common/helpers";
+import { frontendLocation, passwordSaltRounds } from "../config";
 import User from "../entities/User.entity";
 
 export const signup: RequestHandler = async (req, res, next) => {
@@ -46,10 +40,10 @@ export const signup: RequestHandler = async (req, res, next) => {
   user.email = email;
   user.emailVerified = false;
   user.password = hashedPassword;
+  user.phoneVerified = false;
   if (phone && phoneCountryCode) {
     user.phone = phone;
     user.phoneCountryCode = phoneCountryCode;
-    user.phoneVerified = false;
   }
 
   try {
@@ -61,7 +55,7 @@ export const signup: RequestHandler = async (req, res, next) => {
 
   res.json({ message: "VERIFICATION_LINK_SENT" });
 
-  sendVerificationEmail(user.email as string, frontendLocation);
+  sendVerificationEmail(user, frontendLocation);
   if (phone && phoneCountryCode) {
     // TODO: send verification SMS
   }
@@ -76,13 +70,28 @@ export const sendVerificationEmail_Handler: RequestHandler = async (
   // redirectUrl is used to tell the loginWithToken route handler
   //   where to redirect the user after token verification
   // This is useful when implementing magic sign-in
-  const { email, redirectUrl } = req.body;
+  const {
+    email,
+    redirectUrl,
+  }: { email: string; redirectUrl?: string } = req.body;
 
   const userRepository = getRepository(User);
-  const user = userRepository.findOne({ email });
+  const user = await userRepository.findOne({ email });
   if (!user) return;
 
-  sendVerificationEmail(email, redirectUrl);
+  sendVerificationEmail(user, redirectUrl);
+};
+
+export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
+  res.json({ message: "SMS_MAYBE_SENT" });
+
+  const { phoneCountryCode, phone } = req.body;
+
+  const userRepository = getRepository(User);
+  const user = await userRepository.findOne({ phone, phoneCountryCode });
+  if (!user) return;
+
+  sendVerificationSMS(user);
 };
 
 // TODO: support login with phone and password
@@ -100,7 +109,7 @@ export const loginWithPassword: RequestHandler = async (req, res) => {
 
   if (!user.emailVerified) {
     res.json({ message: "VERIFICATION_LINK_SENT" });
-    sendVerificationEmail(user.email as string, frontendLocation);
+    sendVerificationEmail(user, frontendLocation);
     return;
   }
 
@@ -144,29 +153,3 @@ export const logout: RequestHandler = (req, res) => {
   delete req.session.user;
   res.json({ message: "LOGOUT_SUCCESSFUL" });
 };
-
-// The `redirectUrl` param is used to tell the loginWithToken
-//   route handler (which gets hit when user clicks verification link)
-//   where to redirect the user after token verification
-async function sendVerificationEmail(email: string, redirectUrl?: string) {
-  const token = createEmailVerificationToken();
-  const expirySeconds = emailVerificationTokenExpiryMinutes * 60;
-
-  // TODO: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't. Find out why.
-  await cache.set(`tokens:${email}`, token, "EX", expirySeconds);
-
-  const b64data = toBase64(`${email}::${token}`);
-  let verificationLink = `${apiLocation}/login/${b64data}`;
-  if (redirectUrl) verificationLink += `?redirect=${toBase64(redirectUrl)}`;
-
-  return emailer.send({
-    template: "email-verification",
-    message: { to: email },
-    locals: { link: verificationLink },
-  });
-}
-
-function createEmailVerificationToken() {
-  return getRandomString(emailVerificationTokenLength, { disallowed: ":" });
-}
