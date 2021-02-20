@@ -27,7 +27,7 @@ createDbConnection({
   url: databaseUrl,
   entities: [User],
   synchronize: nodeEnv === "development",
-  logging: nodeEnv === "development",
+  logging: ["error"],
 });
 
 const app = express();
@@ -55,7 +55,7 @@ app.use(
   })
 );
 
-app.get("/", (req, res) => res.end("OK"));
+app.get("/", (_, res) => res.end("OK"));
 app.use("/auth", authRouter);
 
 app.listen(port, () => console.log(`Server listening on port ${port}`));
