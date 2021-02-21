@@ -104,9 +104,13 @@ export const loginWithPassword: RequestHandler = async (req, res) => {
   const userRepository = getRepository(User);
   const user = await userRepository.findOne({
     ...(email ? { email } : { phone, phoneCountryCode }),
-    password: hashed,
   });
   if (!user) {
+    res.status(400).json({ error: "INVALID_CREDENTIALS" });
+    return;
+  }
+
+  if (!bcrypt.compare(hashed, user.password as string)) {
     res.status(400).json({ error: "INVALID_CREDENTIALS" });
     return;
   }
