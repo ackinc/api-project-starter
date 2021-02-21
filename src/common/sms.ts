@@ -1,7 +1,7 @@
 import path from "path";
 import pug from "pug";
 
-const templatesDir = path.join(__dirname, "../templates/sms");
+const templatesDir = path.join(__dirname, "../../templates/sms");
 
 interface SendSMSOptions {
   to: string;

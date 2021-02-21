@@ -2,7 +2,7 @@ import Email from "email-templates";
 import path from "path";
 import { defaultMailFromAddress, smtpUrl } from "../config";
 
-const templatesDir = path.join(__dirname, "../templates/emails");
+const templatesDir = path.join(__dirname, "../../templates/emails");
 
 interface SendEmailOptions {
   to: string;
