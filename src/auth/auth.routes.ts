@@ -63,6 +63,7 @@ authRouter.post(
   loginWithPassword
 );
 
+authRouter.get("/login/:b64data", loginWithToken);
 authRouter.post("/login/:b64data", loginWithToken);
 
 authRouter.post("/logout", checkAuthenticated, logout);

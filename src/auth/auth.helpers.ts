@@ -29,8 +29,8 @@ export async function sendVerificationEmail(
   await cache.set(`tokens:${email}`, token, "EX", expirySeconds);
 
   const b64data = toBase64(`${email}::${token}`);
-  let verificationLink = `${apiLocation}/login/${b64data}`;
-  if (redirectUrl) verificationLink += `?redirect=${toBase64(redirectUrl)}`;
+  let verificationLink = `${apiLocation}/auth/login/${b64data}`;
+  if (redirectUrl) verificationLink += `?redirectUrl=${toBase64(redirectUrl)}`;
 
   return sendEmail({
     to: email,
