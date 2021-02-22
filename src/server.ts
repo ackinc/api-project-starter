@@ -10,6 +10,7 @@ import connectRedis from "connect-redis";
 import { createConnection as createDbConnection } from "typeorm";
 
 import authRouter from "./auth/auth.routes";
+import usersRouter from "./users/users.routes";
 import { getClient as getRedisClient } from "./common/cache";
 import {
   allowedOrigins,
@@ -57,5 +58,6 @@ app.use(
 
 app.get("/", (_, res) => res.end("OK"));
 app.use("/auth", authRouter);
+app.use("/users", usersRouter);
 
 app.listen(port, () => console.log(`Server listening on port ${port}`));
