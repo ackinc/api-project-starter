@@ -47,12 +47,18 @@ export const updateUser: RequestHandler = async (req, res, next) => {
   if (firstName) user.firstName = firstName;
   if (lastName) user.lastName = lastName;
   if (profilePicUrl) user.profilePicUrl = profilePicUrl;
-  if (email) {
+  if (email && email !== user.email) {
+    // extra guard to make sure we're not triggering a verification
+    //   email if FE sends email in update request even though the user
+    //   didn't actually change their email
     user.email = email;
     user.emailVerified = false;
     sendVerificationEmail(user, frontendLocation);
   }
-  if (phone || phoneCountryCode) {
+  if (
+    (phone && phone !== user.phone) ||
+    (phoneCountryCode && phoneCountryCode !== user.phoneCountryCode)
+  ) {
     if (phone) user.phone = phone;
     if (phoneCountryCode) user.phoneCountryCode = phone;
     user.phoneVerified = false;
