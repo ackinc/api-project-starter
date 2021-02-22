@@ -20,10 +20,7 @@ export const getUser: RequestHandler = (req, res) => {
   ];
 
   res.json({
-    data: _.at(
-      req.session.user as Record<string, unknown>,
-      retrievableUserProperties
-    ),
+    data: _.pick(req.session.user, retrievableUserProperties),
   });
 };
 
