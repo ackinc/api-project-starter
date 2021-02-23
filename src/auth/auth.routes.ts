@@ -2,7 +2,7 @@
 //   like email verification, reset password etc.
 
 import express from "express";
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 
 import { validateRequest } from "../common/handlers";
 import { minPasswordLength } from "../config";
@@ -19,6 +19,7 @@ import { checkAuthenticated } from "../common/handlers";
 
 const authRouter = express.Router();
 
+// TODO: validate phoneCountryCode
 authRouter.post(
   "/signup",
   body("firstName").exists(),
@@ -27,34 +28,43 @@ authRouter.post(
   body("password")
     .isLength({ min: minPasswordLength })
     .withMessage(`must be at least ${minPasswordLength} characters`),
+  body("phone")
+    .optional()
+    .customSanitizer((phone) => phone.replace(/\D/g, ""))
+    .isMobilePhone("any"),
   validateRequest,
   signup
 );
 
 authRouter.post(
   "/send_email_verification_link",
-  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
+  body("email").isEmail(),
   body("redirectUrl").optional().isURL(),
   validateRequest,
   sendVerificationEmail_Handler
 );
 
+// TODO: validate phoneCountryCode
 authRouter.post(
   "/send_phone_verification_code",
   body("phoneCountryCode").exists(),
-  body("phone").exists(),
+  body("phone")
+    .customSanitizer((phone) => phone.replace(/\D/g, ""))
+    .isMobilePhone("any"),
   validateRequest,
   sendVerificationSMS_Handler
 );
 
+// TODO: allow user to reset password via phone
 authRouter.post(
   "/send_password_reset_link",
-  body("email").isEmail().normalizeEmail({ all_lowercase: true }),
+  body("email").isEmail(),
   body("redirectUrl").isURL(),
   validateRequest,
   sendVerificationEmail_Handler
 );
 
+// TODO: validate phoneCountryCode
 authRouter.post(
   "/login",
   body("emailOrPhone").exists(),
@@ -63,8 +73,8 @@ authRouter.post(
   loginWithPassword
 );
 
-authRouter.get("/login/:b64data", loginWithToken);
-authRouter.post("/login/:b64data", loginWithToken);
+authRouter.get("/login/:b64data", param("b64data").isBase64(), loginWithToken);
+authRouter.post("/login/:b64data", param("b64data").isBase64(), loginWithToken);
 
 authRouter.post("/logout", checkAuthenticated, logout);
 
