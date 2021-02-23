@@ -7,7 +7,8 @@ import cors from "cors";
 import express from "express";
 import session from "express-session";
 import connectRedis from "connect-redis";
-import { createConnection as createDbConnection } from "typeorm";
+import { Connection, createConnection as createDbConnection } from "typeorm";
+import { promisify } from "util";
 
 import authRouter from "./auth/auth.routes";
 import usersRouter from "./users/users.routes";
@@ -22,14 +23,18 @@ import {
 import User from "./entities/User.entity";
 
 const RedisStore = connectRedis(session);
+const redisClient = getRedisClient();
 
-createDbConnection({
-  type: "postgres",
-  url: databaseUrl,
-  entities: [User],
-  synchronize: nodeEnv === "development",
-  logging: ["error"],
-});
+let dbConnection: Connection;
+(async () => {
+  dbConnection = await createDbConnection({
+    type: "postgres",
+    url: databaseUrl,
+    entities: [User],
+    synchronize: nodeEnv === "development",
+    logging: ["error"],
+  });
+})();
 
 const app = express();
 if (nodeEnv !== "development") {
@@ -51,7 +56,7 @@ app.use(
     resave: false,
     saveUninitialized: true,
     secret: cookieSecrets,
-    store: new RedisStore({ client: getRedisClient() }),
+    store: new RedisStore({ client: redisClient }),
     rolling: true,
   })
 );
@@ -60,4 +65,20 @@ app.get("/", (_, res) => res.end("OK"));
 app.use("/auth", authRouter);
 app.use("/users", usersRouter);
 
-app.listen(port, () => console.log(`Server listening on port ${port}`));
+const server = app.listen(port, () =>
+  console.log(`Server listening on port ${port}`)
+);
+
+process.on("SIGTERM", async () => {
+  console.log("Received SIGTERM. Shutting down...");
+
+  // shut the server down first so that any in-process requests
+  //   can continue to use the db and redis connections
+  await promisify(server.close.bind(server))();
+  await promisify(redisClient.quit.bind(redisClient))();
+  await dbConnection.close();
+
+  console.log(
+    "Server has shut down and connections have been closed. The process will now exit."
+  );
+});
