@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "built/server.js",
   "engines": {
     "node": "14.x",
     "yarn": "1.x"
@@ -13,7 +13,7 @@
     "prebuild": "yarn clean",
     "build": "tsc",
     "clean": "rm -r built && mkdir built && touch built/.keep",
-    "dev": "yarn build:watch & nodemon built/server.js",
+    "dev": "yarn build:watch & nodemon",
     "prestart": "yarn build",
     "start": "node built/server.js"
   },
