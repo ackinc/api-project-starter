@@ -12,7 +12,7 @@
     "build:watch": "tsc --watch",
     "prebuild": "yarn clean",
     "build": "tsc",
-    "clean": "rm -r built/* && touch built/.keep",
+    "clean": "rm -r built && mkdir built && touch built/.keep",
     "dev": "yarn build:watch & nodemon built/server.js",
     "prestart": "yarn build",
     "start": "node built/server.js"
