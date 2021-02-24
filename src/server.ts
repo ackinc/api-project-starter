@@ -3,15 +3,12 @@ dotenv.config();
 
 import "reflect-metadata";
 
-import cors from "cors";
-import express from "express";
-import session from "express-session";
 import connectRedis from "connect-redis";
+import session from "express-session";
 import { Connection, createConnection as createDbConnection } from "typeorm";
 import { promisify } from "util";
 
-import authRouter from "./auth/auth.routes";
-import usersRouter from "./users/users.routes";
+import createApp from "./app";
 import { getClient as getRedisClient } from "./common/cache";
 import {
   allowedOrigins,
@@ -22,7 +19,6 @@ import {
 } from "./config";
 import User from "./entities/User.entity";
 
-const RedisStore = connectRedis(session);
 const redisClient = getRedisClient();
 
 let dbConnection: Connection;
@@ -36,16 +32,9 @@ let dbConnection: Connection;
   });
 })();
 
-const app = express();
-if (nodeEnv !== "development") {
-  app.set("trust proxy", 1);
-}
-
-app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
-
-app.use(
-  session({
+const RedisStore = connectRedis(session);
+const app = createApp(
+  {
     name: "ae-sid",
     cookie: {
       httpOnly: true,
@@ -58,12 +47,9 @@ app.use(
     secret: cookieSecrets,
     store: new RedisStore({ client: redisClient }),
     rolling: true,
-  })
+  },
+  { origin: allowedOrigins, credentials: true }
 );
-
-app.get("/", (_, res) => res.end("OK"));
-app.use("/auth", authRouter);
-app.use("/users", usersRouter);
 
 const server = app.listen(port, () =>
   console.log(`Server listening on port ${port}`)
