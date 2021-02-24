@@ -2,10 +2,7 @@ import _ from "lodash";
 import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
 
-import {
-  sendVerificationEmail,
-  sendVerificationSMS,
-} from "../auth/auth.helpers";
+import { sendVerificationEmail, sendVerificationSMS } from "../common/helpers";
 import User from "../entities/User.entity";
 import { frontendLocation } from "../config";
 

@@ -3,9 +3,12 @@ import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
 import validator from "validator";
 
-import { sendVerificationEmail, sendVerificationSMS } from "./auth.helpers";
 import * as cache from "../common/cache";
-import { fromBase64 } from "../common/helpers";
+import {
+  fromBase64,
+  sendVerificationEmail,
+  sendVerificationSMS,
+} from "../common/helpers";
 import { frontendLocation, passwordSaltRounds } from "../config";
 import User from "../entities/User.entity";
 
