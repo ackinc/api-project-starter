@@ -17,6 +17,20 @@
         "${workspaceFolder}/built/**/*.js"
       ],
       "runtimeVersion": "14.15.5"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Test Program",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "preLaunchTask": "tsc: build - tsconfig.json",
+      "program": "${workspaceFolder}/src/server.test.ts",
+      "outFiles": [
+        "${workspaceFolder}/built/**/*.js"
+      ],
+      "runtimeVersion": "14.15.5"
     }
   ]
 }
