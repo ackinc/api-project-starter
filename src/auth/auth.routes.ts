@@ -4,7 +4,7 @@
 import express from "express";
 import { body, param } from "express-validator";
 
-import { validateRequest } from "../common/handlers";
+import { checkAuthenticated, validateRequest } from "../common/handlers";
 import { minPasswordLength } from "../config";
 
 import {
@@ -15,7 +15,6 @@ import {
   sendVerificationSMS_Handler,
   signup,
 } from "./auth.handlers";
-import { checkAuthenticated } from "../common/handlers";
 
 const authRouter = express.Router();
 

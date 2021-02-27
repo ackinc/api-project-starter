@@ -20,6 +20,7 @@
     "test": "jest built/server.test.js"
   },
   "dependencies": {
+    "@types/ioredis": "^4.22.0",
     "bcrypt": "^5.0.0",
     "connect-redis": "^5.0.0",
     "cors": "^2.8.5",
@@ -28,6 +29,7 @@
     "express": "^4.17.1",
     "express-session": "^1.17.1",
     "express-validator": "^6.9.2",
+    "ioredis": "^4.23.0",
     "lodash": "^4.17.21",
     "pg": "^8.5.1",
     "pug": "^3.0.0",
@@ -45,7 +47,6 @@
     "@types/email-templates": "^8.0.1",
     "@types/express": "^4.17.11",
     "@types/express-session": "^1.17.3",
-    "@types/express-validator": "^3.0.0",
     "@types/jest": "^26.0.20",
     "@types/lodash": "^4.14.168",
     "@types/node": "^14.14.25",
