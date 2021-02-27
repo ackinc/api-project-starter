@@ -9,7 +9,10 @@ import { Connection, createConnection as createDbConnection } from "typeorm";
 import { promisify } from "util";
 
 import createApp from "./app";
-import { getClient as getRedisClient } from "./common/cache";
+import {
+  redisClient,
+  closeConnection as closeRedisConnection,
+} from "./common/cache";
 import {
   allowedOrigins,
   cookieSecrets,
@@ -18,8 +21,6 @@ import {
   port,
 } from "./config";
 import User from "./entities/User.entity";
-
-const redisClient = getRedisClient();
 
 let dbConnection: Connection;
 (async () => {
@@ -61,7 +62,7 @@ process.on("SIGTERM", async () => {
   // shut the server down first so that any in-process requests
   //   can continue to use the db and redis connections
   await promisify(server.close.bind(server))();
-  await promisify(redisClient.quit.bind(redisClient))();
+  await closeRedisConnection();
   await dbConnection.close();
 
   console.log(
