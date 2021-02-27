@@ -154,8 +154,8 @@ export const loginWithToken: RequestHandler = async (req, res) => {
     return;
   }
 
-  // TODO: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't. Find out why.
+  // @ts-expect-error: Typescript should be able to see that the following
+  //   function call is valid, but it doesn't
   await cache.del(cacheKey);
 
   const userRepository = getRepository(User);
