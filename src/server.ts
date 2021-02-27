@@ -9,13 +9,14 @@ import { Connection, createConnection as createDbConnection } from "typeorm";
 import { promisify } from "util";
 
 import createApp from "./app";
-import redisClient from "./common/cache";
+import { createClient } from "./common/cache";
 import {
   allowedOrigins,
   cookieSecrets,
   databaseUrl,
   nodeEnv,
   port,
+  redisUrl,
 } from "./config";
 import User from "./entities/User.entity";
 
@@ -31,6 +32,7 @@ let dbConnection: Connection;
 })();
 
 const RedisStore = connectRedis(session);
+const redisClient = createClient(redisUrl);
 const app = createApp(
   {
     name: "ae-sid",

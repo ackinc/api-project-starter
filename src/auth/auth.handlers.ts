@@ -3,7 +3,7 @@ import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
 import validator from "validator";
 
-import cache from "../common/cache";
+import { getClient } from "../common/cache";
 import {
   fromBase64,
   sendVerificationEmail,
@@ -146,6 +146,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
     return;
   }
 
+  const cache = getClient();
   const cacheKeySuffix = email || `${phoneCountryCode}${phone}`;
   const cacheKey = `tokens:${cacheKeySuffix}`;
   const actualToken = await cache.get(cacheKey);

@@ -5,11 +5,9 @@ dotenv.config({ path: path.join(__dirname, "../.env.test") });
 import request from "supertest";
 import { Connection, createConnection as createDbConnection } from "typeorm";
 
-// This import creates a Redis connection as a side-effect
-// TODO: Explore how dependency injection can make this better
 import createApp from "./app";
-import redisClient from "./common/cache";
-import { cookieSecrets, databaseUrl } from "./config";
+import { createClient } from "./common/cache";
+import { cookieSecrets, databaseUrl, redisUrl } from "./config";
 import User from "./entities/User.entity";
 
 const app = createApp({
@@ -18,6 +16,7 @@ const app = createApp({
   secret: cookieSecrets,
 });
 let dbConnection: Connection;
+const redisClient = createClient(redisUrl);
 
 beforeAll(async () => {
   dbConnection = await createDbConnection({

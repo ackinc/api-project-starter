@@ -1,4 +1,4 @@
-import cache from "./cache";
+import { getClient } from "./cache";
 import sendEmail from "./email";
 import sendSMS from "./sms";
 import {
@@ -76,6 +76,7 @@ export async function sendVerificationEmail(
   const token = createEmailVerificationToken();
   const expirySeconds = emailVerificationTokenExpiryMinutes * 60;
 
+  const cache = getClient();
   await cache.set(`tokens:${email}`, token, "EX", expirySeconds);
 
   const b64data = toBase64(`${email}::${token}`);
@@ -103,6 +104,7 @@ export async function sendVerificationSMS(user: User): Promise<void> {
   const code = createSMSVerificationCode();
   const expirySeconds = phoneVerificationCodeExpiryMinutes * 60;
 
+  const cache = getClient();
   await cache.set(`tokens:${fullPhoneNumber}`, code, "EX", expirySeconds);
 
   return sendSMS({
