@@ -8,7 +8,7 @@ import { Connection, createConnection as createDbConnection } from "typeorm";
 // This import creates a Redis connection as a side-effect
 // TODO: Explore how dependency injection can make this better
 import createApp from "./app";
-import { closeConnection as closeRedisConnection } from "./common/cache";
+import redisClient from "./common/cache";
 import { cookieSecrets, databaseUrl } from "./config";
 import User from "./entities/User.entity";
 
@@ -30,7 +30,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await closeRedisConnection();
+  await redisClient.disconnect();
   await dbConnection.close();
 });
 

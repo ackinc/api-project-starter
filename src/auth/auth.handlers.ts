@@ -3,7 +3,7 @@ import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
 import validator from "validator";
 
-import * as cache from "../common/cache";
+import cache from "../common/cache";
 import {
   fromBase64,
   sendVerificationEmail,
@@ -154,8 +154,6 @@ export const loginWithToken: RequestHandler = async (req, res) => {
     return;
   }
 
-  // @ts-expect-error: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't
   await cache.del(cacheKey);
 
   const userRepository = getRepository(User);
