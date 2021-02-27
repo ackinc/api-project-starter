@@ -76,8 +76,8 @@ export async function sendVerificationEmail(
   const token = createEmailVerificationToken();
   const expirySeconds = emailVerificationTokenExpiryMinutes * 60;
 
-  // TODO: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't. Find out why.
+  // @ts-expect-error: Typescript should be able to see that the following
+  //   function call is valid, but it doesn't
   await cache.set(`tokens:${email}`, token, "EX", expirySeconds);
 
   const b64data = toBase64(`${email}::${token}`);
@@ -105,8 +105,8 @@ export async function sendVerificationSMS(user: User): Promise<void> {
   const code = createSMSVerificationCode();
   const expirySeconds = phoneVerificationCodeExpiryMinutes * 60;
 
-  // TODO: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't. Find out why.
+  // @ts-expect-error: Typescript should be able to see that the following
+  //   function call is valid, but it doesn't
   await cache.set(`tokens:${fullPhoneNumber}`, code, "EX", expirySeconds);
 
   return sendSMS({
