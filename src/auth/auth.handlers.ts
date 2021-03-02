@@ -57,17 +57,17 @@ export const signup: RequestHandler = async (req, res, next) => {
     return;
   }
 
-  res.json({ message: "VERIFICATION_LINK_SENT" });
-
-  sendVerificationEmail(user, frontendLocation);
+  // Calling `sendVerificationEmail` *after* `res.json(...)` causes an
+  //   uncaughtPromiseRejection when running tests due to a module being loaded
+  //   *after* all tests are run. See write-up "ry83hu"
+  await sendVerificationEmail(user, frontendLocation);
+  res.json({ message: "VERIFICATION_EMAIL_SENT" });
 };
 
 export const sendVerificationEmail_Handler: RequestHandler = async (
   req,
   res
 ) => {
-  res.json({ message: "EMAIL_MAYBE_SENT" });
-
   // redirectUrl is used to tell the loginWithToken route handler
   //   where to redirect the user after token verification
   // This is useful when implementing magic sign-in
@@ -78,21 +78,19 @@ export const sendVerificationEmail_Handler: RequestHandler = async (
 
   const userRepository = getRepository(User);
   const user = await userRepository.findOne({ email });
-  if (!user) return;
+  if (user) await sendVerificationEmail(user, redirectUrl);
 
-  sendVerificationEmail(user, redirectUrl);
+  res.json({ message: "VERIFICATION_EMAIL_SENT" });
 };
 
 export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
-  res.json({ message: "SMS_MAYBE_SENT" });
-
   const { phoneCountryCode, phone } = req.body;
 
   const userRepository = getRepository(User);
   const user = await userRepository.findOne({ phone, phoneCountryCode });
-  if (!user) return;
+  if (user) await sendVerificationSMS(user);
 
-  sendVerificationSMS(user);
+  res.json({ message: "VERIFICATION_SMS_SENT" });
 };
 
 export const loginWithPassword: RequestHandler = async (req, res) => {
@@ -119,14 +117,14 @@ export const loginWithPassword: RequestHandler = async (req, res) => {
   }
 
   if (email && !user.emailVerified) {
+    await sendVerificationEmail(user, frontendLocation);
     res.json({ message: "VERIFICATION_EMAIL_SENT" });
-    sendVerificationEmail(user, frontendLocation);
     return;
   }
 
   if (phoneCountryCode && phone && !user.phoneVerified) {
+    await sendVerificationSMS(user);
     res.json({ message: "VERIFICATION_SMS_SENT" });
-    sendVerificationSMS(user);
     return;
   }
 
