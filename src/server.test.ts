@@ -34,16 +34,15 @@ afterAll(async () => {
 });
 
 describe("signup", () => {
-  it("creates user in DB and triggers verification email", () => {
-    // return request(app)
-    //   .post("/auth/signup")
-    //   .send({
-    //     firstName: "Test",
-    //     lastName: "User",
-    //     email: "testuser@mailinator.com",
-    //     password: "123456",
-    //   })
-    //   .expect(200)
-    //   .then(() => {});
+  it("creates user in DB and triggers verification email", (done) => {
+    request(app)
+      .post("/auth/signup")
+      .send({
+        firstName: "Test",
+        lastName: "User",
+        email: "testuser@mailinator.com",
+        password: "123456",
+      })
+      .expect(200, done);
   });
 });

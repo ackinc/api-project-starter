@@ -21,6 +21,16 @@ export default async function sendEmail({
   template,
   locals = {},
 }: SendEmailOptions): Promise<void> {
+  // NOTE
+  // Returning early here to avoid a strange uncaughtPromiseRejection
+  //   when running tests via jest.
+  // The cause seems to be a race condition or circular dependency when
+  //   evaluating `require('pug')` in the exports.pug function in consolidate.js,
+  //   a dependency of the email-templates package.
+  // The `require('pug')` expression was evaluating to `{}` instead of the actual
+  //   exported object of the pug package when running tests.
+  if (nodeEnv === "test") return;
+
   const templatePath = path.join(templatesDir, template);
   email.send({ template: templatePath, message: { to }, locals });
 }

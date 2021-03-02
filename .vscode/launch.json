@@ -19,23 +19,27 @@
       "runtimeVersion": "14.15.5"
     },
     {
+      "name": "Launch Test Program",
       "type": "node",
       "request": "launch",
-      "name": "Launch Test Program",
       "runtimeArgs": [
         "--inspect-brk",
         "${workspaceRoot}/node_modules/.bin/jest",
         "--runInBand"
       ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "port": 9229,
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "preLaunchTask": "tsc: build - tsconfig.json",
+      "runtimeVersion": "14.15.5",
       "program": "${workspaceFolder}/src/server.test.ts",
+      "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": [
         "${workspaceFolder}/built/**/*.js"
       ],
-      "runtimeVersion": "14.15.5"
+      "disableOptimisticBPs": true
     }
   ]
 }
