@@ -101,6 +101,51 @@ describe("signup", () => {
     );
   });
 
+  it("fails if supplied email, password, or phone number are invalid", () => {
+    const dummyUsers = [
+      {
+        firstName: "Test",
+        lastName: "User",
+        email: "testuser+ru3329",
+        password: "123456",
+      },
+      {
+        firstName: "Test",
+        lastName: "User",
+        email: "testuser+ru3329",
+        password: "12345", // too short
+      },
+      {
+        firstName: "Test",
+        lastName: "User",
+        email: "testuser+ru3329@mailinator.com",
+        password: "123456",
+        phone: "1111111111",
+      },
+      {
+        firstName: "Test",
+        lastName: "User",
+        email: "testuser+ru3329@mailinator.com",
+        password: "123456",
+        phoneCountryCode: "+91",
+      },
+      {
+        firstName: "Test",
+        lastName: "User",
+        email: "testuser+ru3329@mailinator.com",
+        password: "123456",
+        phoneCountryCode: "+91",
+        phone: "abc",
+      },
+    ];
+
+    return Promise.all(
+      dummyUsers.map((du) =>
+        request(app).post("/auth/signup").send(du).expect(400)
+      )
+    );
+  });
+
   it("does not create user if email already in use", async () => {
     const dummyUser1 = {
       firstName: "Test",

@@ -32,7 +32,8 @@ export const checkTargetUserIsAuthenticatedUser: (
 export const validateRequest: RequestHandler = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    res.status(400).json({ error: errors.array()[0] });
+    const error = errors.array()[0];
+    res.status(400).json({ error: `${error.msg}: ${error.param}` });
   } else {
     next();
   }
