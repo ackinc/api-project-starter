@@ -13,11 +13,12 @@
     "prebuild": "yarn clean",
     "build": "tsc",
     "clean": "rm -r built && mkdir built && touch built/.keep",
-    "dev": "yarn build:watch & nodemon",
+    "dev": "yarn build:watch & yarn test:watch & nodemon",
     "prestart": "yarn build",
     "start": "node built/server.js",
     "pretest": "yarn build",
-    "test": "jest built/server.test.js"
+    "test": "jest built/server.test.js",
+    "test:watch": "jest --watch built/server.test.js"
   },
   "dependencies": {
     "@types/ioredis": "^4.22.0",
