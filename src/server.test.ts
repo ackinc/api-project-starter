@@ -253,3 +253,53 @@ describe("send phone verification code", () => {
     expect(mockSendSMS).not.toHaveBeenCalled();
   });
 });
+
+describe("send password-reset link", () => {
+  it("sends email if user exists and redirectUrl provided", async () => {
+    await request(app).post("/auth/signup").send(dummyUser);
+
+    const redirectUrl = "https://ae-frontend.com/account";
+    await request(app)
+      .post("/auth/send_password_reset_link")
+      .send({ email: dummyUser.email, redirectUrl })
+      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+    expect(mockSendEmail.mock.calls.length).toBe(2);
+  });
+
+  it("fails if email or redirectUrl are missing/invalid", async () => {
+    const redirectUrl = "https://ae-frontend.com/account";
+
+    await request(app)
+      .post("/auth/send_password_reset_link")
+      .send({ email: dummyUser.email })
+      .expect(400);
+
+    await request(app)
+      .post("/auth/send_password_reset_link")
+      .send({ redirectUrl })
+      .expect(400);
+
+    await request(app)
+      .post("/auth/send_password_reset_link")
+      .send({ email: "invalid", redirectUrl })
+      .expect(400);
+
+    await request(app)
+      .post("/auth/send_password_reset_link")
+      .send({ email: dummyUser.email, redirectUrl: "invalid" })
+      .expect(400);
+
+    expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+
+  it("fails silently if no user with provided email", async () => {
+    const redirectUrl = "https://ae-frontend.com/account";
+    await request(app)
+      .post("/auth/send_password_reset_link")
+      .send({ email: "doesnotexist@mailinator.com", redirectUrl })
+      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+    expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+});
