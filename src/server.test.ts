@@ -212,3 +212,44 @@ describe("send email sign-in link", () => {
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
+
+describe("send phone verification code", () => {
+  it("sends SMS if user exists", async () => {
+    await request(app).post("/auth/signup").send(dummyUser);
+
+    await request(app)
+      .post("/auth/send_phone_verification_code")
+      .send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        phone: dummyUser.phone,
+      })
+      .expect(200, { message: "VERIFICATION_SMS_SENT" });
+
+    expect(mockSendSMS).toHaveBeenCalled();
+  });
+
+  it("fails if phone missing or invalid", async () => {
+    // phone missing
+    await request(app)
+      .post("/auth/send_phone_verification_code")
+      .send({})
+      .expect(400);
+
+    // phone invalid - no phoneCountryCode
+    await request(app)
+      .post("/auth/send_phone_verification_code")
+      .send({ phone: dummyUser.phone })
+      .expect(400);
+
+    // phone invalid
+    await request(app)
+      .post("/auth/send_phone_verification_code")
+      .send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        phone: "invalid",
+      })
+      .expect(400);
+
+    expect(mockSendSMS).not.toHaveBeenCalled();
+  });
+});
