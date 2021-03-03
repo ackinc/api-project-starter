@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.join(__dirname, "../.env.test") });
 
+import _ from "lodash";
 import request from "supertest";
 import {
   Connection,
@@ -36,6 +37,15 @@ const mockSendSMS = sendSMS as jest.MockedFunction<typeof sendSMS>;
 mockSendEmail.mockImplementation(() => Promise.resolve(undefined));
 mockSendSMS.mockImplementation(() => Promise.resolve(undefined));
 
+const dummyUser = {
+  firstName: "Anirudh",
+  lastName: "Nimmagadda",
+  email: "anirudh.nimmagadda@gmail.com",
+  password: "123456",
+  phoneCountryCode: "+91",
+  phone: "9916812170",
+};
+
 beforeAll(async () => {
   dbConnection = await createDbConnection({
     type: "postgres",
@@ -61,15 +71,6 @@ afterEach(async () => {
 
 describe("signup", () => {
   it("creates user in DB and triggers verification email", async () => {
-    const dummyUser = {
-      firstName: "Test",
-      lastName: "User",
-      email: "testuser+ru3329@mailinator.com",
-      password: "123456",
-      phoneCountryCode: "+91",
-      phone: "9916812170",
-    };
-
     await request(app).post("/auth/signup").send(dummyUser).expect(200, {
       message: "VERIFICATION_EMAIL_SENT",
     });
@@ -91,26 +92,10 @@ describe("signup", () => {
 
   it("fails if firstName, lastName, email, or password are not provided", async () => {
     const dummyUsers = [
-      {
-        lastName: "User",
-        email: "testuser+ru3329@mailinator.com",
-        password: "123456",
-      },
-      {
-        firstName: "Test",
-        email: "testuser+ru3329@mailinator.com",
-        password: "123456",
-      },
-      {
-        firstName: "Test",
-        lastName: "User",
-        password: "123456",
-      },
-      {
-        firstName: "Test",
-        lastName: "User",
-        email: "testuser+ru3329@mailinator.com",
-      },
+      _.omit(dummyUser, ["firstName", "phoneCountryCode", "phone"]),
+      _.omit(dummyUser, ["lastName", "phoneCountryCode", "phone"]),
+      _.omit(dummyUser, ["email", "phoneCountryCode", "phone"]),
+      _.omit(dummyUser, ["password", "phoneCountryCode", "phone"]),
     ];
 
     await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
@@ -121,33 +106,10 @@ describe("signup", () => {
 
   it("fails if supplied email, password, or phone number are invalid", async () => {
     const dummyUsers = [
-      {
-        firstName: "Test",
-        lastName: "User",
-        email: "testuser+ru3329", // invalid
-        password: "123456",
-      },
-      {
-        firstName: "Test",
-        lastName: "User",
-        email: "testuser+ru3329",
-        password: "12345", // too short
-      },
-      {
-        firstName: "Test",
-        lastName: "User",
-        email: "testuser+ru3329@mailinator.com",
-        password: "123456",
-        phone: "1111111111", // missing phoneCountryCode
-      },
-      {
-        firstName: "Test",
-        lastName: "User",
-        email: "testuser+ru3329@mailinator.com",
-        password: "123456",
-        phoneCountryCode: "+91",
-        phone: "abc", // invalid
-      },
+      { ...dummyUser, email: "invalid" },
+      { ...dummyUser, password: "short" },
+      { ...dummyUser, phoneCountryCode: undefined },
+      { ...dummyUser, phone: "invalid" },
     ];
 
     await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
@@ -157,21 +119,14 @@ describe("signup", () => {
   });
 
   it("does not create user if email already in use", async () => {
-    const dummyUser1 = {
-      firstName: "Test",
-      lastName: "User",
-      email: "testuser+r3wr@mailinator.com",
-      password: "123456",
-    };
-
     const dummyUser2 = {
-      firstName: "Anothertest",
-      lastName: "User",
-      email: "testuser+r3wr@mailinator.com",
+      firstName: "Vikash",
+      lastName: "Bijarnia",
+      email: dummyUser.email,
       password: "123456",
     };
 
-    await request(app).post("/auth/signup").send(dummyUser1).expect(200, {
+    await request(app).post("/auth/signup").send(dummyUser).expect(200, {
       message: "VERIFICATION_EMAIL_SENT",
     });
 
@@ -181,25 +136,16 @@ describe("signup", () => {
   });
 
   it("does not create user if phone already in use", async () => {
-    const dummyUser1 = {
-      firstName: "Test",
-      lastName: "User",
-      email: "testuser+gerr@mailinator.com",
-      password: "123456",
-      phoneCountryCode: "+91",
-      phone: "9999999999",
-    };
-
     const dummyUser2 = {
-      firstName: "Anothertest",
-      lastName: "User",
-      email: "testuser+herr@mailinator.com",
+      firstName: "Vikash",
+      lastName: "Bijarnia",
+      email: "vikash.bijarnia@mailinator.com",
       password: "123456",
       phoneCountryCode: "+91",
-      phone: "9999999999",
+      phone: "9916812170",
     };
 
-    await request(app).post("/auth/signup").send(dummyUser1).expect(200, {
+    await request(app).post("/auth/signup").send(dummyUser).expect(200, {
       message: "VERIFICATION_EMAIL_SENT",
     });
 
@@ -211,15 +157,6 @@ describe("signup", () => {
 
 describe("send email sign-in link", () => {
   it("sends email if user exists", async () => {
-    const dummyUser = {
-      firstName: "Test",
-      lastName: "User",
-      email: "testuser@mailinator.com",
-      password: "123456",
-      phoneCountryCode: "+91",
-      phone: "9916812170",
-    };
-
     await request(app).post("/auth/signup").send(dummyUser);
 
     await request(app)
@@ -231,14 +168,6 @@ describe("send email sign-in link", () => {
   });
 
   it("allows a redirectUrl to be specified", async () => {
-    const dummyUser = {
-      firstName: "Test",
-      lastName: "User",
-      email: "testuser@mailinator.com",
-      password: "123456",
-      phoneCountryCode: "+91",
-      phone: "9916812170",
-    };
     const redirectUrl = "https://www.google.com";
 
     await request(app).post("/auth/signup").send(dummyUser);
