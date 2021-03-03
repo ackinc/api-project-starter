@@ -2,6 +2,8 @@
  * @jest-environment node
  */
 
+jest.mock("./common/email");
+
 import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.join(__dirname, "../.env.test") });
@@ -15,6 +17,7 @@ import {
 
 import createApp from "./app";
 import { createClient } from "./common/cache";
+import sendEmail from "./common/email";
 import { cookieSecrets, databaseUrl, redisUrl } from "./config";
 import User from "./entities/User.entity";
 
@@ -25,6 +28,9 @@ const app = createApp({
 });
 let dbConnection: Connection;
 const redisClient = createClient(redisUrl);
+
+// @ts-expect-error: jest ensures the following method call is valid
+sendEmail.mockImplementation(() => Promise.resolve(true));
 
 beforeAll(async () => {
   dbConnection = await createDbConnection({
@@ -42,7 +48,7 @@ afterAll(async () => {
 });
 
 describe("signup", () => {
-  it("creates user in DB", async () => {
+  it("creates user in DB and triggers verification email", async () => {
     const dummyUser = {
       firstName: "Test",
       lastName: "User",
@@ -68,6 +74,7 @@ describe("signup", () => {
     expect(user?.phoneCountryCode).toBe(dummyUser.phoneCountryCode);
     expect(user?.phone).toBe(dummyUser.phone);
     expect(user?.phoneVerified).toBe(false);
+    expect(sendEmail).toHaveBeenCalled();
   });
 
   it("fails if firstName, lastName, email, or password are not provided", () => {
