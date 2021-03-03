@@ -5,6 +5,7 @@ import express from "express";
 import { body, param } from "express-validator";
 
 import { checkAuthenticated, validateRequest } from "../common/handlers";
+import { emailOrPhoneValidator, phoneValidator } from "../common/helpers";
 import { minPasswordLength } from "../config";
 
 import {
@@ -18,7 +19,6 @@ import {
 
 const authRouter = express.Router();
 
-// TODO: validate phoneCountryCode
 authRouter.post(
   "/signup",
   body("firstName").exists(),
@@ -30,7 +30,7 @@ authRouter.post(
   body("phone")
     .optional()
     .customSanitizer((phone) => phone.replace(/\D/g, ""))
-    .isMobilePhone("any"),
+    .custom(phoneValidator),
   validateRequest,
   signup
 );
@@ -43,13 +43,12 @@ authRouter.post(
   sendVerificationEmail_Handler
 );
 
-// TODO: validate phoneCountryCode
 authRouter.post(
   "/send_phone_verification_code",
   body("phoneCountryCode").exists(),
   body("phone")
     .customSanitizer((phone) => phone.replace(/\D/g, ""))
-    .isMobilePhone("any"),
+    .custom(phoneValidator),
   validateRequest,
   sendVerificationSMS_Handler
 );
@@ -63,10 +62,9 @@ authRouter.post(
   sendVerificationEmail_Handler
 );
 
-// TODO: validate phoneCountryCode
 authRouter.post(
   "/login",
-  body("emailOrPhone").exists(),
+  body("emailOrPhone").custom(emailOrPhoneValidator),
   body("password").exists(),
   validateRequest,
   loginWithPassword

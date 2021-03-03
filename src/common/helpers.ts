@@ -1,3 +1,7 @@
+import { CustomValidator } from "express-validator";
+import isMobilePhone from "validator/lib/isMobilePhone";
+import isEmail from "validator/lib/isEmail";
+
 import { getClient } from "./cache";
 import sendEmail from "./email";
 import sendSMS from "./sms";
@@ -117,3 +121,15 @@ export async function sendVerificationSMS(user: User): Promise<void> {
 function createSMSVerificationCode() {
   return getRandomString(phoneVerificationCodeLength, { digits: true });
 }
+
+export const phoneValidator: CustomValidator = (phone, { req }) => {
+  const { phoneCountryCode } = req.body;
+  const fullPhone = `${phoneCountryCode}${phone}`;
+  if (!isMobilePhone(fullPhone, "any", { strictMode: true })) {
+    throw new Error("invalid phone");
+  }
+  return true;
+};
+
+export const emailOrPhoneValidator: CustomValidator = (value, meta) =>
+  isEmail(value) ? true : phoneValidator(value, meta);
