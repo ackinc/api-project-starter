@@ -3,6 +3,7 @@
  */
 
 jest.mock("./common/email");
+jest.mock("./common/sms");
 
 import dotenv from "dotenv";
 import path from "path";
@@ -18,6 +19,7 @@ import {
 import createApp from "./app";
 import { createClient } from "./common/cache";
 import sendEmail from "./common/email";
+import sendSMS from "./common/sms";
 import { cookieSecrets, databaseUrl, redisUrl } from "./config";
 import User from "./entities/User.entity";
 
@@ -31,6 +33,8 @@ const redisClient = createClient(redisUrl);
 
 // @ts-expect-error: jest ensures the following method call is valid
 sendEmail.mockImplementation(() => Promise.resolve(true));
+// @ts-expect-error: jest ensures the following method call is valid
+sendSMS.mockImplementation(() => Promise.resolve(true));
 
 beforeAll(async () => {
   dbConnection = await createDbConnection({
