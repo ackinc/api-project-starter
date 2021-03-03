@@ -5,7 +5,11 @@ import express from "express";
 import { body, param } from "express-validator";
 
 import { checkAuthenticated, validateRequest } from "../common/handlers";
-import { emailOrPhoneValidator, phoneValidator } from "../common/helpers";
+import {
+  emailOrPhoneValidator,
+  phoneSanitizer,
+  phoneValidator,
+} from "../common/helpers";
 import { minPasswordLength } from "../config";
 
 import {
@@ -29,7 +33,7 @@ authRouter.post(
     .withMessage(`must be at least ${minPasswordLength} characters`),
   body("phone")
     .optional()
-    .customSanitizer((phone) => phone.replace(/\D/g, ""))
+    .customSanitizer(phoneSanitizer)
     .custom(phoneValidator),
   validateRequest,
   signup
@@ -46,9 +50,7 @@ authRouter.post(
 authRouter.post(
   "/send_phone_verification_code",
   body("phoneCountryCode").exists(),
-  body("phone")
-    .customSanitizer((phone) => phone.replace(/\D/g, ""))
-    .custom(phoneValidator),
+  body("phone").customSanitizer(phoneSanitizer).custom(phoneValidator),
   validateRequest,
   sendVerificationSMS_Handler
 );

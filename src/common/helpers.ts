@@ -131,5 +131,8 @@ export const phoneValidator: CustomValidator = (phone, { req }) => {
   return true;
 };
 
+export const phoneSanitizer = (phone: string): string | undefined =>
+  phone?.replace(/\D/g, "");
+
 export const emailOrPhoneValidator: CustomValidator = (value, meta) =>
   isEmail(value) ? true : phoneValidator(value, meta);
