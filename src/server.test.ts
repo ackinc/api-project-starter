@@ -31,10 +31,10 @@ const app = createApp({
 let dbConnection: Connection;
 const redisClient = createClient(redisUrl);
 
-// @ts-expect-error: jest ensures the following method call is valid
-sendEmail.mockImplementation(() => Promise.resolve(true));
-// @ts-expect-error: jest ensures the following method call is valid
-sendSMS.mockImplementation(() => Promise.resolve(true));
+const mockSendEmail = sendEmail as jest.MockedFunction<typeof sendEmail>;
+const mockSendSMS = sendSMS as jest.MockedFunction<typeof sendSMS>;
+mockSendEmail.mockImplementation(() => Promise.resolve(undefined));
+mockSendSMS.mockImplementation(() => Promise.resolve(undefined));
 
 beforeAll(async () => {
   dbConnection = await createDbConnection({
@@ -51,6 +51,14 @@ afterAll(async () => {
   await dbConnection.close();
 });
 
+afterEach(async () => {
+  mockSendEmail.mockClear();
+  mockSendSMS.mockClear();
+
+  const userRepository = getRepository(User);
+  await userRepository.clear();
+});
+
 describe("signup", () => {
   it("creates user in DB and triggers verification email", async () => {
     const dummyUser = {
@@ -59,7 +67,7 @@ describe("signup", () => {
       email: "testuser+ru3329@mailinator.com",
       password: "123456",
       phoneCountryCode: "+91",
-      phone: "1111111111",
+      phone: "9916812170",
     };
 
     await request(app).post("/auth/signup").send(dummyUser).expect(200, {
@@ -78,10 +86,10 @@ describe("signup", () => {
     expect(user?.phoneCountryCode).toBe(dummyUser.phoneCountryCode);
     expect(user?.phone).toBe(dummyUser.phone);
     expect(user?.phoneVerified).toBe(false);
-    expect(sendEmail).toHaveBeenCalled();
+    expect(mockSendEmail).toHaveBeenCalled();
   });
 
-  it("fails if firstName, lastName, email, or password are not provided", () => {
+  it("fails if firstName, lastName, email, or password are not provided", async () => {
     const dummyUsers = [
       {
         lastName: "User",
@@ -105,19 +113,18 @@ describe("signup", () => {
       },
     ];
 
-    return Promise.all(
-      dummyUsers.map((du) =>
-        request(app).post("/auth/signup").send(du).expect(400)
-      )
-    );
+    await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
+    await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
+    await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
+    await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
   });
 
-  it("fails if supplied email, password, or phone number are invalid", () => {
+  it("fails if supplied email, password, or phone number are invalid", async () => {
     const dummyUsers = [
       {
         firstName: "Test",
         lastName: "User",
-        email: "testuser+ru3329",
+        email: "testuser+ru3329", // invalid
         password: "123456",
       },
       {
@@ -131,7 +138,7 @@ describe("signup", () => {
         lastName: "User",
         email: "testuser+ru3329@mailinator.com",
         password: "123456",
-        phone: "1111111111",
+        phone: "1111111111", // missing phoneCountryCode
       },
       {
         firstName: "Test",
@@ -139,22 +146,14 @@ describe("signup", () => {
         email: "testuser+ru3329@mailinator.com",
         password: "123456",
         phoneCountryCode: "+91",
-      },
-      {
-        firstName: "Test",
-        lastName: "User",
-        email: "testuser+ru3329@mailinator.com",
-        password: "123456",
-        phoneCountryCode: "+91",
-        phone: "abc",
+        phone: "abc", // invalid
       },
     ];
 
-    return Promise.all(
-      dummyUsers.map((du) =>
-        request(app).post("/auth/signup").send(du).expect(400)
-      )
-    );
+    await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
+    await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
+    await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
+    await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
   });
 
   it("does not create user if email already in use", async () => {
@@ -207,5 +206,80 @@ describe("signup", () => {
     await request(app).post("/auth/signup").send(dummyUser2).expect(400, {
       error: "PHONE_TAKEN",
     });
+  });
+});
+
+describe("send email sign-in link", () => {
+  it("sends email if user exists", async () => {
+    const dummyUser = {
+      firstName: "Test",
+      lastName: "User",
+      email: "testuser@mailinator.com",
+      password: "123456",
+      phoneCountryCode: "+91",
+      phone: "9916812170",
+    };
+
+    await request(app).post("/auth/signup").send(dummyUser);
+
+    await request(app)
+      .post("/auth/send_email_verification_link")
+      .send({ email: dummyUser.email })
+      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+    expect(mockSendEmail.mock.calls.length).toBe(2);
+  });
+
+  it("allows a redirectUrl to be specified", async () => {
+    const dummyUser = {
+      firstName: "Test",
+      lastName: "User",
+      email: "testuser@mailinator.com",
+      password: "123456",
+      phoneCountryCode: "+91",
+      phone: "9916812170",
+    };
+    const redirectUrl = "https://www.google.com";
+
+    await request(app).post("/auth/signup").send(dummyUser);
+
+    await request(app)
+      .post("/auth/send_email_verification_link")
+      .send({ email: dummyUser.email, redirectUrl })
+      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+    expect(mockSendEmail.mock.calls.length).toBe(2);
+  });
+
+  it("fails if email not specified", async () => {
+    await request(app)
+      .post("/auth/send_email_verification_link")
+      .send({})
+      .expect(400);
+
+    expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+
+  it("fails if provided email or redirectUrl are invalid", async () => {
+    await request(app)
+      .post("/auth/send_email_verification_link")
+      .send({ email: "invalidemail" })
+      .expect(400);
+
+    await request(app)
+      .post("/auth/send_email_verification_link")
+      .send({ email: "validemail@mailinator.com", redirectUrl: "invalidurl" })
+      .expect(400);
+
+    expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+
+  it("fails silently if no user with provided email", async () => {
+    await request(app)
+      .post("/auth/send_email_verification_link")
+      .send({ email: "doesnotexist@mailinator.com" })
+      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+    expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
