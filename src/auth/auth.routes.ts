@@ -6,6 +6,7 @@ import { body, param } from "express-validator";
 
 import { checkAuthenticated, validateRequest } from "../common/handlers";
 import {
+  emailOrPhoneSanitizer,
   emailOrPhoneValidator,
   phoneSanitizer,
   phoneValidator,
@@ -64,9 +65,17 @@ authRouter.post(
   sendVerificationEmail_Handler
 );
 
+// emailOrPhoneSanitizer populates req.body.email or req.body.phone
 authRouter.post(
   "/login",
-  body("emailOrPhone").custom(emailOrPhoneValidator),
+  body("emailOrPhone")
+    .custom(emailOrPhoneValidator)
+    .customSanitizer(emailOrPhoneSanitizer),
+  body("email").optional().isEmail(),
+  body("phone")
+    .optional()
+    .customSanitizer(phoneSanitizer)
+    .custom(phoneValidator),
   body("password").exists(),
   validateRequest,
   loginWithPassword

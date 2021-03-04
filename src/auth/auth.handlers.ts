@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
-import validator from "validator";
 
 import { getClient } from "../common/cache";
 import {
@@ -94,12 +93,7 @@ export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
 };
 
 export const loginWithPassword: RequestHandler = async (req, res) => {
-  const { emailOrPhone, phoneCountryCode, password } = req.body;
-  let email: string | undefined, phone: string | undefined;
-
-  if (validator.isEmail(emailOrPhone)) email = emailOrPhone as string;
-  else phone = emailOrPhone as string;
-
+  const { email, phoneCountryCode, phone, password } = req.body;
   const hashed = await bcrypt.hash(password, passwordSaltRounds);
 
   const userRepository = getRepository(User);

@@ -1,4 +1,4 @@
-import { CustomValidator } from "express-validator";
+import { CustomSanitizer, CustomValidator } from "express-validator";
 import isMobilePhone from "validator/lib/isMobilePhone";
 import isEmail from "validator/lib/isEmail";
 
@@ -134,5 +134,13 @@ export const phoneValidator: CustomValidator = (phone, { req }) => {
 export const phoneSanitizer = (phone: string): string | undefined =>
   phone?.replace(/\D/g, "");
 
-export const emailOrPhoneValidator: CustomValidator = (value, meta) =>
-  isEmail(value) ? true : phoneValidator(value, meta);
+export const emailOrPhoneSanitizer: CustomSanitizer = (value, { req }) => {
+  if (!value) return;
+  else if (isEmail(value)) req.body.email = value;
+  else req.body.phone = value;
+};
+
+export const emailOrPhoneValidator: CustomValidator = (value) => {
+  if (!value) throw new Error("invalid emailOrPhone");
+  return true;
+};
