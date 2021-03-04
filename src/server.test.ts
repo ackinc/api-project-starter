@@ -47,6 +47,12 @@ const dummyUser = {
   phoneCountryCode: "+91",
   phone: "9916812170",
 };
+const anotherDummyUser = {
+  firstName: "Vikash",
+  lastName: "Bijarnia",
+  email: "vikash.bijarnia@mailinator.com",
+  password: "qwerty",
+};
 
 beforeAll(async () => {
   dbConnection = await createDbConnection({
@@ -122,36 +128,29 @@ describe("auth routes", () => {
     });
 
     it("does not create user if email already in use", async () => {
-      const dummyUser2 = {
-        firstName: "Vikash",
-        lastName: "Bijarnia",
-        email: dummyUser.email,
-        password: "123456",
-      };
-
       await request(app).post("/auth/signup").send(dummyUser).expect(200, {
         message: "VERIFICATION_EMAIL_SENT",
       });
 
+      const dummyUser2 = {
+        ...anotherDummyUser,
+        email: dummyUser.email,
+      };
       await request(app).post("/auth/signup").send(dummyUser2).expect(400, {
         error: "EMAIL_TAKEN",
       });
     });
 
     it("does not create user if phone already in use", async () => {
-      const dummyUser2 = {
-        firstName: "Vikash",
-        lastName: "Bijarnia",
-        email: "vikash.bijarnia@mailinator.com",
-        password: "123456",
-        phoneCountryCode: "+91",
-        phone: "9916812170",
-      };
-
       await request(app).post("/auth/signup").send(dummyUser).expect(200, {
         message: "VERIFICATION_EMAIL_SENT",
       });
 
+      const dummyUser2 = {
+        ...anotherDummyUser,
+        phoneCountryCode: "+91",
+        phone: "9916812170",
+      };
       await request(app).post("/auth/signup").send(dummyUser2).expect(400, {
         error: "PHONE_TAKEN",
       });
@@ -505,13 +504,11 @@ describe("user routes", () => {
     });
 
     it("fails if logged-in user does not have permission to access requested user", async () => {
-      const userRepository = getRepository(User);
-      const anotherUser = new User();
-      anotherUser.firstName = "Vikash";
-      anotherUser.lastName = "Bijarnia";
-      anotherUser.email = "vikash.bijarnia@mailinator.com";
-      anotherUser.password = "somepass";
-      await userRepository.save(anotherUser);
+      await request(app).post("/auth/signup").send(anotherDummyUser);
+
+      const anotherUser = await getRepository(User).findOneOrFail({
+        email: anotherDummyUser.email,
+      });
 
       await agent.get(`/users/${anotherUser.id}`).expect(403);
     });
