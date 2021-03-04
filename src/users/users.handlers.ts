@@ -29,7 +29,7 @@ export const getUser: RequestHandler = async (req, res) => {
   res.json({ data: _.pick(user, retrievableUserProperties) });
 };
 
-export const updateUser: RequestHandler = async (req, res, next) => {
+export const updateUser: RequestHandler = async (req, res) => {
   const {
     firstName,
     lastName,
@@ -39,14 +39,15 @@ export const updateUser: RequestHandler = async (req, res, next) => {
     profilePicUrl,
   } = req.body;
 
-  const curUser = req.session.user as Record<string, unknown>;
-  const curUserId = curUser.id as number;
+  const userId: number =
+    req.params.id === "me"
+      ? (req.session?.user?.id as number)
+      : Number(req.params.id);
 
   const userRepository = getRepository(User);
-  let user = await userRepository.findOne(curUserId);
+  let user = await userRepository.findOne(userId);
   if (!user) {
-    next(new Error(`Failed to find authenticated user ${curUserId} in DB`));
-    return;
+    return res.status(404).json({ error: "NOT_FOUND" });
   }
 
   if (firstName) user.firstName = firstName;
@@ -65,7 +66,7 @@ export const updateUser: RequestHandler = async (req, res, next) => {
     (phoneCountryCode && phoneCountryCode !== user.phoneCountryCode)
   ) {
     if (phone) user.phone = phone;
-    if (phoneCountryCode) user.phoneCountryCode = phone;
+    if (phoneCountryCode) user.phoneCountryCode = phoneCountryCode;
     user.phoneVerified = false;
     sendVerificationSMS(user);
   }
