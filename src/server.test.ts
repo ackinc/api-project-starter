@@ -25,7 +25,7 @@ import sendSMS from "./common/sms";
 import { cookieSecrets, databaseUrl, redisUrl } from "./config";
 import User from "./entities/User.entity";
 
-const toDo = () => false;
+const toDo = () => false; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 const app = createApp({
   resave: false,
@@ -75,8 +75,6 @@ afterAll(async () => {
 afterEach(async () => {
   mockSendEmail.mockClear();
   mockSendSMS.mockClear();
-
-  const userRepository = getRepository(User);
   await userRepository.clear();
 });
 
@@ -87,7 +85,6 @@ describe("auth routes", () => {
         message: "VERIFICATION_EMAIL_SENT",
       });
 
-      const userRepository = getRepository(User);
       const user = await userRepository.findOne({ email: dummyUser.email });
 
       expect(user).toBeInstanceOf(User);
@@ -315,7 +312,6 @@ describe("auth routes", () => {
     });
 
     it("allows emailVerified user to login with email and password", async () => {
-      const userRepository = getRepository(User);
       await userRepository.update(
         { email: dummyUser.email },
         { emailVerified: true }
@@ -328,7 +324,6 @@ describe("auth routes", () => {
     });
 
     it("allows phoneVerified user to login with phone and password", async () => {
-      const userRepository = getRepository(User);
       await userRepository.update(
         { email: dummyUser.email },
         { phoneVerified: true }
@@ -469,7 +464,6 @@ describe("user routes", () => {
   beforeEach(async () => {
     await request(app).post("/auth/signup").send(dummyUser);
 
-    const userRepository = getRepository(User);
     user = await userRepository.findOneOrFail({ email: dummyUser.email });
     user.emailVerified = true;
     await userRepository.save(user);
@@ -505,7 +499,7 @@ describe("user routes", () => {
     });
 
     it("fails if specified user does not exist", async () => {
-      await getRepository(User).delete(user.id as number);
+      await userRepository.delete(user.id as number);
 
       await agent.get(`/users/${user.id}`).expect(404);
     });
@@ -513,7 +507,7 @@ describe("user routes", () => {
     it("fails if logged-in user does not have permission to access requested user", async () => {
       await request(app).post("/auth/signup").send(anotherDummyUser);
 
-      const anotherUser = await getRepository(User).findOneOrFail({
+      const anotherUser = await userRepository.findOneOrFail({
         email: anotherDummyUser.email,
       });
 
