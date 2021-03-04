@@ -303,3 +303,115 @@ describe("send password-reset link", () => {
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
+
+describe("login with password", () => {
+  beforeEach(async () => {
+    await request(app).post("/auth/signup").send(dummyUser);
+  });
+
+  it("allows emailVerified user to login with email and password", async () => {
+    const userRepository = getRepository(User);
+    await userRepository.update(
+      { email: dummyUser.email },
+      { emailVerified: true }
+    );
+
+    await request(app)
+      .post("/auth/login")
+      .send({ emailOrPhone: dummyUser.email, password: dummyUser.password })
+      .expect(200, { message: "LOGIN_SUCCESSFUL" });
+  });
+
+  it("allows phoneVerified user to login with phone and password", async () => {
+    const userRepository = getRepository(User);
+    await userRepository.update(
+      { email: dummyUser.email },
+      { phoneVerified: true }
+    );
+
+    await request(app)
+      .post("/auth/login")
+      .send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        emailOrPhone: dummyUser.phone,
+        password: dummyUser.password,
+      })
+      .expect(200, { message: "LOGIN_SUCCESSFUL" });
+  });
+
+  it("sends magic sign-in email if user tries to login with unverified email", async () => {
+    await request(app)
+      .post("/auth/login")
+      .send({
+        emailOrPhone: dummyUser.email,
+        password: dummyUser.password,
+      })
+      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+  });
+
+  it("sends verification SMS if user tries to login with unverified phone", async () => {
+    await request(app)
+      .post("/auth/login")
+      .send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        emailOrPhone: dummyUser.phone,
+        password: dummyUser.password,
+      })
+      .expect(200, { message: "VERIFICATION_SMS_SENT" });
+  });
+
+  it("fails if email/phone are missing/invalid", async () => {
+    await request(app)
+      .post("/auth/login")
+      .send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        password: dummyUser.password,
+      })
+      .expect(400);
+
+    await request(app)
+      .post("/auth/login")
+      .send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        emailOrPhone: "invalid",
+        password: dummyUser.password,
+      })
+      .expect(400);
+  });
+
+  it("fails if no user with email/phone is found in DB", async () => {
+    await request(app)
+      .post("/auth/login")
+      .send({
+        email: "nosuchemail@gmail.com",
+        password: dummyUser.password,
+      })
+      .expect(400);
+
+    await request(app)
+      .post("/auth/login")
+      .send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        phone: "9916812171",
+        password: dummyUser.password,
+      })
+      .expect(400);
+  });
+
+  it("fails if password is missing/incorrect", async () => {
+    await request(app)
+      .post("/auth/login")
+      .send({
+        email: dummyUser.email,
+      })
+      .expect(400);
+
+    await request(app)
+      .post("/auth/login")
+      .send({
+        email: dummyUser.email,
+        password: "incorrect",
+      })
+      .expect(400);
+  });
+});
