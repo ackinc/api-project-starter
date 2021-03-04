@@ -347,6 +347,8 @@ describe("login with password", () => {
         password: dummyUser.password,
       })
       .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+    expect(mockSendEmail).toHaveBeenCalled();
   });
 
   it("sends verification SMS if user tries to login with unverified phone", async () => {
@@ -358,6 +360,8 @@ describe("login with password", () => {
         password: dummyUser.password,
       })
       .expect(200, { message: "VERIFICATION_SMS_SENT" });
+
+    expect(mockSendSMS).toHaveBeenCalled();
   });
 
   it("fails if email/phone are missing/invalid", async () => {
@@ -413,5 +417,39 @@ describe("login with password", () => {
         password: "incorrect",
       })
       .expect(400);
+  });
+});
+
+describe("login with token", () => {
+  beforeEach(async () => {
+    await request(app).post("/auth/signup").send(dummyUser);
+  });
+
+  it("should log the user in if token is valid", async () => {
+    // a user was just created (beforeEach), so there will be a token
+    //   in the cache
+
+    const token = await redisClient.get(`tokens:${dummyUser.email}`);
+    const b64data = Buffer.from(`${dummyUser.email}::${token}`).toString(
+      "base64"
+    );
+    await request(app)
+      .post(`/auth/login/${b64data}`)
+      .expect(200, { message: "LOGIN_SUCCESSFUL" });
+  });
+
+  it("should fail if token is invalid", async () => {
+    await request(app).post("/auth/login/invalidtoken").expect(400);
+
+    const b64data = Buffer.from(`${dummyUser.email}::invalidtoken`).toString(
+      "base64"
+    );
+    await request(app).post(`/auth/login/${b64data}`).expect(400);
+  });
+});
+
+describe("logout", () => {
+  it("fails if called by unauthenticated user", async () => {
+    await request(app).post("/auth/logout").expect(401);
   });
 });

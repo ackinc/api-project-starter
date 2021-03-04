@@ -154,7 +154,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
     email ? { email } : { phoneCountryCode, phone }
   );
   if (!user) {
-    res.status(400).json({ message: "TOKEN_INVALID_OR_EXPIRED" });
+    res.status(500).json({ error: "SERVER_ERROR" });
     return;
   }
 
