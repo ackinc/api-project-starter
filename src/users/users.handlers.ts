@@ -6,8 +6,9 @@ import { sendVerificationEmail, sendVerificationSMS } from "../common/helpers";
 import User from "../entities/User.entity";
 import { frontendLocation } from "../config";
 
-export const getUser: RequestHandler = (req, res) => {
+export const getUser: RequestHandler = async (req, res) => {
   const retrievableUserProperties = [
+    "id",
     "firstName",
     "lastName",
     "email",
@@ -16,9 +17,16 @@ export const getUser: RequestHandler = (req, res) => {
     "profilePicUrl",
   ];
 
-  res.json({
-    data: _.pick(req.session.user, retrievableUserProperties),
-  });
+  let user: User;
+  try {
+    user = await getRepository(User).findOneOrFail(
+      req.session?.user?.id as number
+    );
+  } catch (e) {
+    return res.status(404).json({ error: "NOT_FOUND" });
+  }
+
+  res.json({ data: _.pick(user, retrievableUserProperties) });
 };
 
 export const updateUser: RequestHandler = async (req, res, next) => {
