@@ -425,12 +425,14 @@ describe("auth routes", () => {
       await request(app).post("/auth/signup").send(dummyUser);
     });
 
-    // TODO: check that emailVerified or phoneVerified are being set
-    //   to true on successful login
-    it("should log the user in if token is valid", async () => {
+    it("should log the user in if email token is valid", async () => {
+      let user = await userRepository.findOneOrFail({
+        email: dummyUser.email,
+      });
+      expect(user.emailVerified).toBe(false);
+
       // a user was just created (beforeEach), so there will be a token
       //   in the cache
-
       const token = await redisClient.get(`tokens:${dummyUser.email}`);
       const b64data = Buffer.from(`${dummyUser.email}::${token}`).toString(
         "base64"
@@ -438,6 +440,37 @@ describe("auth routes", () => {
       await request(app)
         .post(`/auth/login/${b64data}`)
         .expect(200, { message: "LOGIN_SUCCESSFUL" });
+
+      user = await userRepository.findOneOrFail({
+        email: dummyUser.email,
+      });
+      expect(user.emailVerified).toBe(true);
+    });
+
+    it("should log the user in if phone code is valid", async () => {
+      let user = await userRepository.findOneOrFail({
+        email: dummyUser.email,
+      });
+      expect(user.emailVerified).toBe(false);
+
+      await request(app).post(`/auth/send_phone_verification_code`).send({
+        phoneCountryCode: dummyUser.phoneCountryCode,
+        phone: dummyUser.phone,
+      });
+
+      const fullPhone = `${dummyUser.phoneCountryCode}${dummyUser.phone}`;
+      const token = await redisClient.get(`tokens:${fullPhone}`);
+      const b64data = Buffer.from(
+        `${dummyUser.phoneCountryCode}::${dummyUser.phone}::${token}`
+      ).toString("base64");
+      await request(app)
+        .post(`/auth/login/${b64data}`)
+        .expect(200, { message: "LOGIN_SUCCESSFUL" });
+
+      user = await userRepository.findOneOrFail({
+        email: dummyUser.email,
+      });
+      expect(user.phoneVerified).toBe(true);
     });
 
     it("should fail if token is invalid", async () => {
