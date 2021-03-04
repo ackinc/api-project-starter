@@ -15,6 +15,7 @@ import {
   Connection,
   createConnection as createDbConnection,
   getRepository,
+  Repository,
 } from "typeorm";
 
 import createApp from "./app";
@@ -39,6 +40,7 @@ const mockSendSMS = sendSMS as jest.MockedFunction<typeof sendSMS>;
 mockSendEmail.mockImplementation(() => Promise.resolve(undefined));
 mockSendSMS.mockImplementation(() => Promise.resolve(undefined));
 
+let userRepository: Repository<User>;
 const dummyUser = {
   firstName: "Anirudh",
   lastName: "Nimmagadda",
@@ -62,6 +64,7 @@ beforeAll(async () => {
     dropSchema: true,
     synchronize: true,
   });
+  userRepository = getRepository(User);
 });
 
 afterAll(async () => {
@@ -427,6 +430,8 @@ describe("auth routes", () => {
       await request(app).post("/auth/signup").send(dummyUser);
     });
 
+    // TODO: check that emailVerified or phoneVerified are being set
+    //   to true on successful login
     it("should log the user in if token is valid", async () => {
       // a user was just created (beforeEach), so there will be a token
       //   in the cache
@@ -474,6 +479,8 @@ describe("user routes", () => {
       .post("/auth/login")
       .send({ emailOrPhone: dummyUser.email, password: dummyUser.password })
       .expect(200);
+
+    mockSendEmail.mockClear();
   });
 
   describe("get user", () => {
@@ -511,6 +518,103 @@ describe("user routes", () => {
       });
 
       await agent.get(`/users/${anotherUser.id}`).expect(403);
+    });
+  });
+
+  describe("update user", () => {
+    it("updates user record with provided details", async () => {
+      let updatedUser: User;
+
+      const firstName = "Anirud";
+      await agent.post("/users/me").send({ firstName });
+      updatedUser = await userRepository.findOneOrFail(user.id);
+      expect(updatedUser.firstName).toBe(firstName);
+
+      const lastName = "Nimmagadd";
+      await agent.post(`/users/${user.id}`).send({ lastName });
+      updatedUser = await userRepository.findOneOrFail(user.id);
+      expect(updatedUser.lastName).toBe(lastName);
+    });
+
+    it("sends verification email if trying to update email", async () => {
+      const email = "anirudh.nimmagadda@mailinator.com";
+      await agent.post("/users/me").send({ email });
+
+      const updatedUser = await userRepository.findOneOrFail(user.id);
+      expect(updatedUser.email).toBe(email);
+      expect(updatedUser.emailVerified).toBe(false);
+      expect(mockSendEmail).toHaveBeenCalled();
+      expect(mockSendEmail.mock.calls[0][0].to).toBe(email);
+    });
+
+    it("sends verification SMS if trying to update phoneCountryCode", async () => {
+      const phoneCountryCode = "+1";
+      await agent.post("/users/me").send({ phoneCountryCode });
+      const updatedUser = await userRepository.findOneOrFail(user.id);
+      expect(updatedUser.phoneCountryCode).toBe(phoneCountryCode);
+      expect(updatedUser.phoneVerified).toBe(false);
+      expect(mockSendSMS).toHaveBeenCalled();
+      expect(mockSendSMS.mock.calls[0][0].to).toBe(
+        `${updatedUser.phoneCountryCode}${updatedUser.phone}`
+      );
+    });
+
+    it("sends verification SMS if trying to update phone", async () => {
+      const phone = "9916812171";
+      await agent.post("/users/me").send({ phone });
+      const updatedUser = await userRepository.findOneOrFail(user.id);
+      expect(updatedUser.phone).toBe(phone);
+      expect(updatedUser.phoneVerified).toBe(false);
+      expect(mockSendSMS).toHaveBeenCalled();
+      expect(mockSendSMS.mock.calls[0][0].to).toBe(
+        `${updatedUser.phoneCountryCode}${updatedUser.phone}`
+      );
+    });
+
+    it("fails if user not authenticated", async () => {
+      await request(app)
+        .post(`/users/${user.id}`)
+        .send({ firstName: "Ani" })
+        .expect(401);
+    });
+
+    it("fails if target user not found", async () => {
+      await userRepository.delete(user.id as number);
+
+      await agent
+        .post(`/users/${user.id}`)
+        .send({ firstName: "Ani" })
+        .expect(404);
+    });
+
+    it("fails if authenticated user not authorized", async () => {
+      await request(app).post("/auth/signup").send(anotherDummyUser);
+      const anotherUser = await userRepository.findOneOrFail({
+        email: anotherDummyUser.email,
+      });
+
+      await agent
+        .post(`/users/${anotherUser.id}`)
+        .send({ firstName: "Vikas" })
+        .expect(403);
+    });
+
+    // TODO: add check for invalid phoneCountryCode
+    it("fails if trying to update with invalid password/email/phone", async () => {
+      await agent
+        .post(`/users/${user.id}`)
+        .send({ password: "short" })
+        .expect(400);
+
+      await agent
+        .post(`/users/${user.id}`)
+        .send({ email: "invalid" })
+        .expect(400);
+
+      await agent
+        .post(`/users/${user.id}`)
+        .send({ phone: "invalid" })
+        .expect(400);
     });
   });
 });
