@@ -69,387 +69,389 @@ afterEach(async () => {
   await userRepository.clear();
 });
 
-describe("signup", () => {
-  it("creates user in DB and triggers verification email", async () => {
-    await request(app).post("/auth/signup").send(dummyUser).expect(200, {
-      message: "VERIFICATION_EMAIL_SENT",
+describe("auth routes", () => {
+  describe("signup", () => {
+    it("creates user in DB and triggers verification email", async () => {
+      await request(app).post("/auth/signup").send(dummyUser).expect(200, {
+        message: "VERIFICATION_EMAIL_SENT",
+      });
+
+      const userRepository = getRepository(User);
+      const user = await userRepository.findOne({ email: dummyUser.email });
+
+      expect(user).toBeInstanceOf(User);
+      expect(user?.firstName).toBe(dummyUser.firstName);
+      expect(user?.lastName).toBe(dummyUser.lastName);
+      expect(user?.email).toBe(dummyUser.email);
+      expect(user?.emailVerified).toBe(false);
+      expect(user?.password).toBeDefined();
+      expect(user?.phoneCountryCode).toBe(dummyUser.phoneCountryCode);
+      expect(user?.phone).toBe(dummyUser.phone);
+      expect(user?.phoneVerified).toBe(false);
+      expect(mockSendEmail).toHaveBeenCalled();
     });
 
-    const userRepository = getRepository(User);
-    const user = await userRepository.findOne({ email: dummyUser.email });
+    it("fails if firstName, lastName, email, or password are not provided", async () => {
+      const dummyUsers = [
+        _.omit(dummyUser, ["firstName", "phoneCountryCode", "phone"]),
+        _.omit(dummyUser, ["lastName", "phoneCountryCode", "phone"]),
+        _.omit(dummyUser, ["email", "phoneCountryCode", "phone"]),
+        _.omit(dummyUser, ["password", "phoneCountryCode", "phone"]),
+      ];
 
-    expect(user).toBeInstanceOf(User);
-    expect(user?.firstName).toBe(dummyUser.firstName);
-    expect(user?.lastName).toBe(dummyUser.lastName);
-    expect(user?.email).toBe(dummyUser.email);
-    expect(user?.emailVerified).toBe(false);
-    expect(user?.password).toBeDefined();
-    expect(user?.phoneCountryCode).toBe(dummyUser.phoneCountryCode);
-    expect(user?.phone).toBe(dummyUser.phone);
-    expect(user?.phoneVerified).toBe(false);
-    expect(mockSendEmail).toHaveBeenCalled();
-  });
-
-  it("fails if firstName, lastName, email, or password are not provided", async () => {
-    const dummyUsers = [
-      _.omit(dummyUser, ["firstName", "phoneCountryCode", "phone"]),
-      _.omit(dummyUser, ["lastName", "phoneCountryCode", "phone"]),
-      _.omit(dummyUser, ["email", "phoneCountryCode", "phone"]),
-      _.omit(dummyUser, ["password", "phoneCountryCode", "phone"]),
-    ];
-
-    await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
-    await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
-    await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
-    await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
-  });
-
-  it("fails if supplied email, password, or phone number are invalid", async () => {
-    const dummyUsers = [
-      { ...dummyUser, email: "invalid" },
-      { ...dummyUser, password: "short" },
-      { ...dummyUser, phoneCountryCode: undefined },
-      { ...dummyUser, phone: "invalid" },
-    ];
-
-    await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
-    await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
-    await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
-    await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
-  });
-
-  it("does not create user if email already in use", async () => {
-    const dummyUser2 = {
-      firstName: "Vikash",
-      lastName: "Bijarnia",
-      email: dummyUser.email,
-      password: "123456",
-    };
-
-    await request(app).post("/auth/signup").send(dummyUser).expect(200, {
-      message: "VERIFICATION_EMAIL_SENT",
+      await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
+      await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
+      await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
+      await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
     });
 
-    await request(app).post("/auth/signup").send(dummyUser2).expect(400, {
-      error: "EMAIL_TAKEN",
-    });
-  });
+    it("fails if supplied email, password, or phone number are invalid", async () => {
+      const dummyUsers = [
+        { ...dummyUser, email: "invalid" },
+        { ...dummyUser, password: "short" },
+        { ...dummyUser, phoneCountryCode: undefined },
+        { ...dummyUser, phone: "invalid" },
+      ];
 
-  it("does not create user if phone already in use", async () => {
-    const dummyUser2 = {
-      firstName: "Vikash",
-      lastName: "Bijarnia",
-      email: "vikash.bijarnia@mailinator.com",
-      password: "123456",
-      phoneCountryCode: "+91",
-      phone: "9916812170",
-    };
-
-    await request(app).post("/auth/signup").send(dummyUser).expect(200, {
-      message: "VERIFICATION_EMAIL_SENT",
+      await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
+      await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
+      await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
+      await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
     });
 
-    await request(app).post("/auth/signup").send(dummyUser2).expect(400, {
-      error: "PHONE_TAKEN",
-    });
-  });
-});
-
-describe("send email sign-in link", () => {
-  it("sends email if user exists", async () => {
-    await request(app).post("/auth/signup").send(dummyUser);
-
-    await request(app)
-      .post("/auth/send_email_verification_link")
-      .send({ email: dummyUser.email })
-      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
-
-    expect(mockSendEmail.mock.calls.length).toBe(2);
-  });
-
-  it("allows a redirectUrl to be specified", async () => {
-    const redirectUrl = "https://www.google.com";
-
-    await request(app).post("/auth/signup").send(dummyUser);
-
-    await request(app)
-      .post("/auth/send_email_verification_link")
-      .send({ email: dummyUser.email, redirectUrl })
-      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
-
-    expect(mockSendEmail.mock.calls.length).toBe(2);
-  });
-
-  it("fails if email not specified", async () => {
-    await request(app)
-      .post("/auth/send_email_verification_link")
-      .send({})
-      .expect(400);
-
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
-
-  it("fails if provided email or redirectUrl are invalid", async () => {
-    await request(app)
-      .post("/auth/send_email_verification_link")
-      .send({ email: "invalidemail" })
-      .expect(400);
-
-    await request(app)
-      .post("/auth/send_email_verification_link")
-      .send({ email: "validemail@mailinator.com", redirectUrl: "invalidurl" })
-      .expect(400);
-
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
-
-  it("fails silently if no user with provided email", async () => {
-    await request(app)
-      .post("/auth/send_email_verification_link")
-      .send({ email: "doesnotexist@mailinator.com" })
-      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
-
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
-});
-
-describe("send phone verification code", () => {
-  it("sends SMS if user exists", async () => {
-    await request(app).post("/auth/signup").send(dummyUser);
-
-    await request(app)
-      .post("/auth/send_phone_verification_code")
-      .send({
-        phoneCountryCode: dummyUser.phoneCountryCode,
-        phone: dummyUser.phone,
-      })
-      .expect(200, { message: "VERIFICATION_SMS_SENT" });
-
-    expect(mockSendSMS).toHaveBeenCalled();
-  });
-
-  it("fails if phone missing or invalid", async () => {
-    // phone missing
-    await request(app)
-      .post("/auth/send_phone_verification_code")
-      .send({})
-      .expect(400);
-
-    // phone invalid - no phoneCountryCode
-    await request(app)
-      .post("/auth/send_phone_verification_code")
-      .send({ phone: dummyUser.phone })
-      .expect(400);
-
-    // phone invalid
-    await request(app)
-      .post("/auth/send_phone_verification_code")
-      .send({
-        phoneCountryCode: dummyUser.phoneCountryCode,
-        phone: "invalid",
-      })
-      .expect(400);
-
-    expect(mockSendSMS).not.toHaveBeenCalled();
-  });
-});
-
-describe("send password-reset link", () => {
-  it("sends email if user exists and redirectUrl provided", async () => {
-    await request(app).post("/auth/signup").send(dummyUser);
-
-    const redirectUrl = "https://ae-frontend.com/account";
-    await request(app)
-      .post("/auth/send_password_reset_link")
-      .send({ email: dummyUser.email, redirectUrl })
-      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
-
-    expect(mockSendEmail.mock.calls.length).toBe(2);
-  });
-
-  it("fails if email or redirectUrl are missing/invalid", async () => {
-    const redirectUrl = "https://ae-frontend.com/account";
-
-    await request(app)
-      .post("/auth/send_password_reset_link")
-      .send({ email: dummyUser.email })
-      .expect(400);
-
-    await request(app)
-      .post("/auth/send_password_reset_link")
-      .send({ redirectUrl })
-      .expect(400);
-
-    await request(app)
-      .post("/auth/send_password_reset_link")
-      .send({ email: "invalid", redirectUrl })
-      .expect(400);
-
-    await request(app)
-      .post("/auth/send_password_reset_link")
-      .send({ email: dummyUser.email, redirectUrl: "invalid" })
-      .expect(400);
-
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
-
-  it("fails silently if no user with provided email", async () => {
-    const redirectUrl = "https://ae-frontend.com/account";
-    await request(app)
-      .post("/auth/send_password_reset_link")
-      .send({ email: "doesnotexist@mailinator.com", redirectUrl })
-      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
-
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
-});
-
-describe("login with password", () => {
-  beforeEach(async () => {
-    await request(app).post("/auth/signup").send(dummyUser);
-  });
-
-  it("allows emailVerified user to login with email and password", async () => {
-    const userRepository = getRepository(User);
-    await userRepository.update(
-      { email: dummyUser.email },
-      { emailVerified: true }
-    );
-
-    await request(app)
-      .post("/auth/login")
-      .send({ emailOrPhone: dummyUser.email, password: dummyUser.password })
-      .expect(200, { message: "LOGIN_SUCCESSFUL" });
-  });
-
-  it("allows phoneVerified user to login with phone and password", async () => {
-    const userRepository = getRepository(User);
-    await userRepository.update(
-      { email: dummyUser.email },
-      { phoneVerified: true }
-    );
-
-    await request(app)
-      .post("/auth/login")
-      .send({
-        phoneCountryCode: dummyUser.phoneCountryCode,
-        emailOrPhone: dummyUser.phone,
-        password: dummyUser.password,
-      })
-      .expect(200, { message: "LOGIN_SUCCESSFUL" });
-  });
-
-  it("sends magic sign-in email if user tries to login with unverified email", async () => {
-    await request(app)
-      .post("/auth/login")
-      .send({
-        emailOrPhone: dummyUser.email,
-        password: dummyUser.password,
-      })
-      .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
-
-    expect(mockSendEmail).toHaveBeenCalled();
-  });
-
-  it("sends verification SMS if user tries to login with unverified phone", async () => {
-    await request(app)
-      .post("/auth/login")
-      .send({
-        phoneCountryCode: dummyUser.phoneCountryCode,
-        emailOrPhone: dummyUser.phone,
-        password: dummyUser.password,
-      })
-      .expect(200, { message: "VERIFICATION_SMS_SENT" });
-
-    expect(mockSendSMS).toHaveBeenCalled();
-  });
-
-  it("fails if email/phone are missing/invalid", async () => {
-    await request(app)
-      .post("/auth/login")
-      .send({
-        phoneCountryCode: dummyUser.phoneCountryCode,
-        password: dummyUser.password,
-      })
-      .expect(400);
-
-    await request(app)
-      .post("/auth/login")
-      .send({
-        phoneCountryCode: dummyUser.phoneCountryCode,
-        emailOrPhone: "invalid",
-        password: dummyUser.password,
-      })
-      .expect(400);
-  });
-
-  it("fails if no user with email/phone is found in DB", async () => {
-    await request(app)
-      .post("/auth/login")
-      .send({
-        email: "nosuchemail@gmail.com",
-        password: dummyUser.password,
-      })
-      .expect(400);
-
-    await request(app)
-      .post("/auth/login")
-      .send({
-        phoneCountryCode: dummyUser.phoneCountryCode,
-        phone: "9916812171",
-        password: dummyUser.password,
-      })
-      .expect(400);
-  });
-
-  it("fails if password is missing/incorrect", async () => {
-    await request(app)
-      .post("/auth/login")
-      .send({
+    it("does not create user if email already in use", async () => {
+      const dummyUser2 = {
+        firstName: "Vikash",
+        lastName: "Bijarnia",
         email: dummyUser.email,
-      })
-      .expect(400);
+        password: "123456",
+      };
 
-    await request(app)
-      .post("/auth/login")
-      .send({
-        email: dummyUser.email,
-        password: "incorrect",
-      })
-      .expect(400);
+      await request(app).post("/auth/signup").send(dummyUser).expect(200, {
+        message: "VERIFICATION_EMAIL_SENT",
+      });
+
+      await request(app).post("/auth/signup").send(dummyUser2).expect(400, {
+        error: "EMAIL_TAKEN",
+      });
+    });
+
+    it("does not create user if phone already in use", async () => {
+      const dummyUser2 = {
+        firstName: "Vikash",
+        lastName: "Bijarnia",
+        email: "vikash.bijarnia@mailinator.com",
+        password: "123456",
+        phoneCountryCode: "+91",
+        phone: "9916812170",
+      };
+
+      await request(app).post("/auth/signup").send(dummyUser).expect(200, {
+        message: "VERIFICATION_EMAIL_SENT",
+      });
+
+      await request(app).post("/auth/signup").send(dummyUser2).expect(400, {
+        error: "PHONE_TAKEN",
+      });
+    });
   });
-});
 
-describe("login with token", () => {
-  beforeEach(async () => {
-    await request(app).post("/auth/signup").send(dummyUser);
+  describe("send email sign-in link", () => {
+    it("sends email if user exists", async () => {
+      await request(app).post("/auth/signup").send(dummyUser);
+
+      await request(app)
+        .post("/auth/send_email_verification_link")
+        .send({ email: dummyUser.email })
+        .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+      expect(mockSendEmail.mock.calls.length).toBe(2);
+    });
+
+    it("allows a redirectUrl to be specified", async () => {
+      const redirectUrl = "https://www.google.com";
+
+      await request(app).post("/auth/signup").send(dummyUser);
+
+      await request(app)
+        .post("/auth/send_email_verification_link")
+        .send({ email: dummyUser.email, redirectUrl })
+        .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+      expect(mockSendEmail.mock.calls.length).toBe(2);
+    });
+
+    it("fails if email not specified", async () => {
+      await request(app)
+        .post("/auth/send_email_verification_link")
+        .send({})
+        .expect(400);
+
+      expect(mockSendEmail).not.toHaveBeenCalled();
+    });
+
+    it("fails if provided email or redirectUrl are invalid", async () => {
+      await request(app)
+        .post("/auth/send_email_verification_link")
+        .send({ email: "invalidemail" })
+        .expect(400);
+
+      await request(app)
+        .post("/auth/send_email_verification_link")
+        .send({ email: "validemail@mailinator.com", redirectUrl: "invalidurl" })
+        .expect(400);
+
+      expect(mockSendEmail).not.toHaveBeenCalled();
+    });
+
+    it("fails silently if no user with provided email", async () => {
+      await request(app)
+        .post("/auth/send_email_verification_link")
+        .send({ email: "doesnotexist@mailinator.com" })
+        .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+      expect(mockSendEmail).not.toHaveBeenCalled();
+    });
   });
 
-  it("should log the user in if token is valid", async () => {
-    // a user was just created (beforeEach), so there will be a token
-    //   in the cache
+  describe("send phone verification code", () => {
+    it("sends SMS if user exists", async () => {
+      await request(app).post("/auth/signup").send(dummyUser);
 
-    const token = await redisClient.get(`tokens:${dummyUser.email}`);
-    const b64data = Buffer.from(`${dummyUser.email}::${token}`).toString(
-      "base64"
-    );
-    await request(app)
-      .post(`/auth/login/${b64data}`)
-      .expect(200, { message: "LOGIN_SUCCESSFUL" });
+      await request(app)
+        .post("/auth/send_phone_verification_code")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          phone: dummyUser.phone,
+        })
+        .expect(200, { message: "VERIFICATION_SMS_SENT" });
+
+      expect(mockSendSMS).toHaveBeenCalled();
+    });
+
+    it("fails if phone missing or invalid", async () => {
+      // phone missing
+      await request(app)
+        .post("/auth/send_phone_verification_code")
+        .send({})
+        .expect(400);
+
+      // phone invalid - no phoneCountryCode
+      await request(app)
+        .post("/auth/send_phone_verification_code")
+        .send({ phone: dummyUser.phone })
+        .expect(400);
+
+      // phone invalid
+      await request(app)
+        .post("/auth/send_phone_verification_code")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          phone: "invalid",
+        })
+        .expect(400);
+
+      expect(mockSendSMS).not.toHaveBeenCalled();
+    });
   });
 
-  it("should fail if token is invalid", async () => {
-    await request(app).post("/auth/login/invalidtoken").expect(400);
+  describe("send password-reset link", () => {
+    it("sends email if user exists and redirectUrl provided", async () => {
+      await request(app).post("/auth/signup").send(dummyUser);
 
-    const b64data = Buffer.from(`${dummyUser.email}::invalidtoken`).toString(
-      "base64"
-    );
-    await request(app).post(`/auth/login/${b64data}`).expect(400);
+      const redirectUrl = "https://ae-frontend.com/account";
+      await request(app)
+        .post("/auth/send_password_reset_link")
+        .send({ email: dummyUser.email, redirectUrl })
+        .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+      expect(mockSendEmail.mock.calls.length).toBe(2);
+    });
+
+    it("fails if email or redirectUrl are missing/invalid", async () => {
+      const redirectUrl = "https://ae-frontend.com/account";
+
+      await request(app)
+        .post("/auth/send_password_reset_link")
+        .send({ email: dummyUser.email })
+        .expect(400);
+
+      await request(app)
+        .post("/auth/send_password_reset_link")
+        .send({ redirectUrl })
+        .expect(400);
+
+      await request(app)
+        .post("/auth/send_password_reset_link")
+        .send({ email: "invalid", redirectUrl })
+        .expect(400);
+
+      await request(app)
+        .post("/auth/send_password_reset_link")
+        .send({ email: dummyUser.email, redirectUrl: "invalid" })
+        .expect(400);
+
+      expect(mockSendEmail).not.toHaveBeenCalled();
+    });
+
+    it("fails silently if no user with provided email", async () => {
+      const redirectUrl = "https://ae-frontend.com/account";
+      await request(app)
+        .post("/auth/send_password_reset_link")
+        .send({ email: "doesnotexist@mailinator.com", redirectUrl })
+        .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+      expect(mockSendEmail).not.toHaveBeenCalled();
+    });
   });
-});
 
-describe("logout", () => {
-  it("fails if called by unauthenticated user", async () => {
-    await request(app).post("/auth/logout").expect(401);
+  describe("login with password", () => {
+    beforeEach(async () => {
+      await request(app).post("/auth/signup").send(dummyUser);
+    });
+
+    it("allows emailVerified user to login with email and password", async () => {
+      const userRepository = getRepository(User);
+      await userRepository.update(
+        { email: dummyUser.email },
+        { emailVerified: true }
+      );
+
+      await request(app)
+        .post("/auth/login")
+        .send({ emailOrPhone: dummyUser.email, password: dummyUser.password })
+        .expect(200, { message: "LOGIN_SUCCESSFUL" });
+    });
+
+    it("allows phoneVerified user to login with phone and password", async () => {
+      const userRepository = getRepository(User);
+      await userRepository.update(
+        { email: dummyUser.email },
+        { phoneVerified: true }
+      );
+
+      await request(app)
+        .post("/auth/login")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          emailOrPhone: dummyUser.phone,
+          password: dummyUser.password,
+        })
+        .expect(200, { message: "LOGIN_SUCCESSFUL" });
+    });
+
+    it("sends magic sign-in email if user tries to login with unverified email", async () => {
+      await request(app)
+        .post("/auth/login")
+        .send({
+          emailOrPhone: dummyUser.email,
+          password: dummyUser.password,
+        })
+        .expect(200, { message: "VERIFICATION_EMAIL_SENT" });
+
+      expect(mockSendEmail).toHaveBeenCalled();
+    });
+
+    it("sends verification SMS if user tries to login with unverified phone", async () => {
+      await request(app)
+        .post("/auth/login")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          emailOrPhone: dummyUser.phone,
+          password: dummyUser.password,
+        })
+        .expect(200, { message: "VERIFICATION_SMS_SENT" });
+
+      expect(mockSendSMS).toHaveBeenCalled();
+    });
+
+    it("fails if email/phone are missing/invalid", async () => {
+      await request(app)
+        .post("/auth/login")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          password: dummyUser.password,
+        })
+        .expect(400);
+
+      await request(app)
+        .post("/auth/login")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          emailOrPhone: "invalid",
+          password: dummyUser.password,
+        })
+        .expect(400);
+    });
+
+    it("fails if no user with email/phone is found in DB", async () => {
+      await request(app)
+        .post("/auth/login")
+        .send({
+          email: "nosuchemail@gmail.com",
+          password: dummyUser.password,
+        })
+        .expect(400);
+
+      await request(app)
+        .post("/auth/login")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          phone: "9916812171",
+          password: dummyUser.password,
+        })
+        .expect(400);
+    });
+
+    it("fails if password is missing/incorrect", async () => {
+      await request(app)
+        .post("/auth/login")
+        .send({
+          email: dummyUser.email,
+        })
+        .expect(400);
+
+      await request(app)
+        .post("/auth/login")
+        .send({
+          email: dummyUser.email,
+          password: "incorrect",
+        })
+        .expect(400);
+    });
+  });
+
+  describe("login with token", () => {
+    beforeEach(async () => {
+      await request(app).post("/auth/signup").send(dummyUser);
+    });
+
+    it("should log the user in if token is valid", async () => {
+      // a user was just created (beforeEach), so there will be a token
+      //   in the cache
+
+      const token = await redisClient.get(`tokens:${dummyUser.email}`);
+      const b64data = Buffer.from(`${dummyUser.email}::${token}`).toString(
+        "base64"
+      );
+      await request(app)
+        .post(`/auth/login/${b64data}`)
+        .expect(200, { message: "LOGIN_SUCCESSFUL" });
+    });
+
+    it("should fail if token is invalid", async () => {
+      await request(app).post("/auth/login/invalidtoken").expect(400);
+
+      const b64data = Buffer.from(`${dummyUser.email}::invalidtoken`).toString(
+        "base64"
+      );
+      await request(app).post(`/auth/login/${b64data}`).expect(400);
+    });
+  });
+
+  describe("logout", () => {
+    it("fails if called by unauthenticated user", async () => {
+      await request(app).post("/auth/logout").expect(401);
+    });
   });
 });
