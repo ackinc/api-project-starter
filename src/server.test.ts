@@ -10,7 +10,7 @@ import path from "path";
 dotenv.config({ path: path.join(__dirname, "../.env.test") });
 
 import _ from "lodash";
-import request from "supertest";
+import request, { SuperAgentTest } from "supertest";
 import {
   Connection,
   createConnection as createDbConnection,
@@ -23,6 +23,8 @@ import sendEmail from "./common/email";
 import sendSMS from "./common/sms";
 import { cookieSecrets, databaseUrl, redisUrl } from "./config";
 import User from "./entities/User.entity";
+
+const toDo = () => false;
 
 const app = createApp({
   resave: false,
@@ -452,6 +454,66 @@ describe("auth routes", () => {
   describe("logout", () => {
     it("fails if called by unauthenticated user", async () => {
       await request(app).post("/auth/logout").expect(401);
+    });
+  });
+});
+
+describe("user routes", () => {
+  let agent: SuperAgentTest;
+  let user: User;
+
+  beforeEach(async () => {
+    await request(app).post("/auth/signup").send(dummyUser);
+
+    const userRepository = getRepository(User);
+    user = await userRepository.findOneOrFail({ email: dummyUser.email });
+    user.emailVerified = true;
+    await userRepository.save(user);
+
+    agent = request.agent(app);
+    await agent
+      .post("/auth/login")
+      .send({ emailOrPhone: dummyUser.email, password: dummyUser.password })
+      .expect(200);
+  });
+
+  describe("get user", () => {
+    it("retrieves the details of specified user", async () => {
+      await agent
+        .get("/users/me")
+        .expect(200)
+        .then((res) => {
+          const { id, email } = res.body.data;
+          expect(id).toBe(user.id);
+          expect(email).toBe(user.email);
+        });
+
+      await agent
+        .get(`/users/${user.id}`)
+        .expect(200)
+        .then((res) => {
+          const { id, email } = res.body.data;
+          expect(id).toBe(user.id);
+          expect(email).toBe(user.email);
+        });
+    });
+
+    it("fails if specified user does not exist", async () => {
+      await getRepository(User).delete(user.id as number);
+
+      await agent.get(`/users/${user.id}`).expect(404);
+    });
+
+    it("fails if logged-in user does not have permission to access requested user", async () => {
+      const userRepository = getRepository(User);
+      const anotherUser = new User();
+      anotherUser.firstName = "Vikash";
+      anotherUser.lastName = "Bijarnia";
+      anotherUser.email = "vikash.bijarnia@mailinator.com";
+      anotherUser.password = "somepass";
+      await userRepository.save(anotherUser);
+
+      await agent.get(`/users/${anotherUser.id}`).expect(403);
     });
   });
 });
