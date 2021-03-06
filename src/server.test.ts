@@ -80,7 +80,7 @@ afterEach(async () => {
 
 describe("auth routes", () => {
   describe("signup", () => {
-    it("creates user in DB, triggers verification email and responds with 200:VERIFICATION_EMAIL_SENT", async () => {
+    it("creates user in DB, triggers verification email", async () => {
       await request(app).post("/auth/signup").send(dummyUser).expect(200, {
         message: "VERIFICATION_EMAIL_SENT",
       });
@@ -99,7 +99,7 @@ describe("auth routes", () => {
       expect(mockSendEmail).toHaveBeenCalled();
     });
 
-    it("responds with 400:INVALID_DATA... if firstName, lastName, email, or password are not provided", async () => {
+    it("fails if firstName, lastName, email, or password are not provided", async () => {
       const dummyUsers = [
         _.omit(dummyUser, ["firstName"]),
         _.omit(dummyUser, ["lastName"]),
