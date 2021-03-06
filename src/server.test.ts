@@ -99,6 +99,20 @@ describe("auth routes", () => {
       expect(mockSendEmail).toHaveBeenCalled();
     });
 
+    test("spaces in phone are removed", async () => {
+      await request(app)
+        .post("/auth/signup")
+        .send({ ...dummyUser, phone: "991 681 2170" })
+        .expect(200, {
+          message: "VERIFICATION_EMAIL_SENT",
+        });
+
+      const user = await userRepository.findOne({ email: dummyUser.email });
+
+      expect(user).toBeInstanceOf(User);
+      expect(user?.phone).toBe(dummyUser.phone);
+    });
+
     it("fails if firstName, lastName, email, or password are not provided", async () => {
       const dummyUsers = [
         _.omit(dummyUser, ["firstName"]),
@@ -391,6 +405,22 @@ describe("auth routes", () => {
         .expect(200, { message: "LOGIN_SUCCESSFUL" });
     });
 
+    it("ignores spaces if a phone number is supplied", async () => {
+      await userRepository.update(
+        { email: dummyUser.email },
+        { phoneVerified: true }
+      );
+
+      await request(app)
+        .post("/auth/login")
+        .send({
+          phoneCountryCode: dummyUser.phoneCountryCode,
+          emailOrPhone: "991 681 2170",
+          password: dummyUser.password,
+        })
+        .expect(200, { message: "LOGIN_SUCCESSFUL" });
+    });
+
     it("sends magic sign-in email if user tries to login with unverified email", async () => {
       await request(app)
         .post("/auth/login")
@@ -666,6 +696,14 @@ describe("user routes", () => {
       expect(mockSendSMS.mock.calls[0][0].to).toBe(
         `${updatedUser.phoneCountryCode}${updatedUser.phone}`
       );
+    });
+
+    it("ignores spaces when updating phone details", async () => {
+      const phoneWithSpaces = "991 681 2171";
+      const phoneWithoutSpaces = phoneWithSpaces.replace(/\s/g, "");
+      await agent.post("/users/me").send({ phone: phoneWithSpaces });
+      const updatedUser = await userRepository.findOneOrFail(user.id);
+      expect(updatedUser.phone).toBe(phoneWithoutSpaces);
     });
 
     it("fails if user not authenticated", async () => {
