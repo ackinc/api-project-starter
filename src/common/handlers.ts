@@ -35,11 +35,9 @@ export const validateRequest: RequestHandler = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = errors.array()[0];
-    res
-      .status(400)
-      .json({
-        error: `${constants.INVALID_DATA}: ${error.msg}: ${error.param}`,
-      });
+    res.status(400).json({
+      error: `${constants.INVALID_DATA}: ${error.param} - ${error.msg}`,
+    });
   } else {
     next();
   }

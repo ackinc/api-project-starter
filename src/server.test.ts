@@ -80,7 +80,7 @@ afterEach(async () => {
 
 describe("auth routes", () => {
   describe("signup", () => {
-    it("creates user in DB and triggers verification email", async () => {
+    it("creates user in DB, triggers verification email and responds with 200:VERIFICATION_EMAIL_SENT", async () => {
       await request(app).post("/auth/signup").send(dummyUser).expect(200, {
         message: "VERIFICATION_EMAIL_SENT",
       });
@@ -99,18 +99,40 @@ describe("auth routes", () => {
       expect(mockSendEmail).toHaveBeenCalled();
     });
 
-    it("fails if firstName, lastName, email, or password are not provided", async () => {
+    it("responds with 400:INVALID_DATA... if firstName, lastName, email, or password are not provided", async () => {
       const dummyUsers = [
-        _.omit(dummyUser, ["firstName", "phoneCountryCode", "phone"]),
-        _.omit(dummyUser, ["lastName", "phoneCountryCode", "phone"]),
-        _.omit(dummyUser, ["email", "phoneCountryCode", "phone"]),
-        _.omit(dummyUser, ["password", "phoneCountryCode", "phone"]),
+        _.omit(dummyUser, ["firstName"]),
+        _.omit(dummyUser, ["lastName"]),
+        _.omit(dummyUser, ["email"]),
+        _.omit(dummyUser, ["password"]),
       ];
 
-      await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
-      await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
-      await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
-      await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[0])
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: firstName/)
+        );
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[1])
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: lastName/)
+        );
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[2])
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: email/));
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[3])
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: password/)
+        );
     });
 
     it("fails if supplied email, password, or phone number are invalid", async () => {
@@ -121,16 +143,32 @@ describe("auth routes", () => {
         { ...dummyUser, phone: "invalid" },
       ];
 
-      await request(app).post("/auth/signup").send(dummyUsers[0]).expect(400);
-      await request(app).post("/auth/signup").send(dummyUsers[1]).expect(400);
-      await request(app).post("/auth/signup").send(dummyUsers[2]).expect(400);
-      await request(app).post("/auth/signup").send(dummyUsers[3]).expect(400);
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[0])
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: email/));
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[1])
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: password/)
+        );
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[2])
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: phone/));
+      await request(app)
+        .post("/auth/signup")
+        .send(dummyUsers[3])
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: phone/));
     });
 
     it("does not create user if email already in use", async () => {
-      await request(app).post("/auth/signup").send(dummyUser).expect(200, {
-        message: "VERIFICATION_EMAIL_SENT",
-      });
+      await request(app).post("/auth/signup").send(dummyUser);
 
       const dummyUser2 = {
         ...anotherDummyUser,
@@ -142,9 +180,7 @@ describe("auth routes", () => {
     });
 
     it("does not create user if phone already in use", async () => {
-      await request(app).post("/auth/signup").send(dummyUser).expect(200, {
-        message: "VERIFICATION_EMAIL_SENT",
-      });
+      await request(app).post("/auth/signup").send(dummyUser);
 
       const dummyUser2 = {
         ...anotherDummyUser,
@@ -186,7 +222,8 @@ describe("auth routes", () => {
       await request(app)
         .post("/auth/send_email_verification_link")
         .send({})
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: email/));
 
       expect(mockSendEmail).not.toHaveBeenCalled();
     });
@@ -195,12 +232,16 @@ describe("auth routes", () => {
       await request(app)
         .post("/auth/send_email_verification_link")
         .send({ email: "invalidemail" })
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: email/));
 
       await request(app)
         .post("/auth/send_email_verification_link")
         .send({ email: "validemail@mailinator.com", redirectUrl: "invalidurl" })
-        .expect(400);
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: redirectUrl/)
+        );
 
       expect(mockSendEmail).not.toHaveBeenCalled();
     });
@@ -235,13 +276,15 @@ describe("auth routes", () => {
       await request(app)
         .post("/auth/send_phone_verification_code")
         .send({})
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: phone/));
 
       // phone invalid - no phoneCountryCode
       await request(app)
         .post("/auth/send_phone_verification_code")
         .send({ phone: dummyUser.phone })
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: phone/));
 
       // phone invalid
       await request(app)
@@ -250,7 +293,8 @@ describe("auth routes", () => {
           phoneCountryCode: dummyUser.phoneCountryCode,
           phone: "invalid",
         })
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: phone/));
 
       expect(mockSendSMS).not.toHaveBeenCalled();
     });
@@ -275,22 +319,30 @@ describe("auth routes", () => {
       await request(app)
         .post("/auth/send_password_reset_link")
         .send({ email: dummyUser.email })
-        .expect(400);
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: redirectUrl/)
+        );
 
       await request(app)
         .post("/auth/send_password_reset_link")
         .send({ redirectUrl })
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: email/));
 
       await request(app)
         .post("/auth/send_password_reset_link")
         .send({ email: "invalid", redirectUrl })
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: email/));
 
       await request(app)
         .post("/auth/send_password_reset_link")
         .send({ email: dummyUser.email, redirectUrl: "invalid" })
-        .expect(400);
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: redirectUrl/)
+        );
 
       expect(mockSendEmail).not.toHaveBeenCalled();
     });
@@ -371,7 +423,10 @@ describe("auth routes", () => {
           phoneCountryCode: dummyUser.phoneCountryCode,
           password: dummyUser.password,
         })
-        .expect(400);
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: emailOrPhone/)
+        );
 
       await request(app)
         .post("/auth/login")
@@ -380,43 +435,47 @@ describe("auth routes", () => {
           emailOrPhone: "invalid",
           password: dummyUser.password,
         })
-        .expect(400);
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: emailOrPhone/)
+        );
     });
 
     it("fails if no user with email/phone is found in DB", async () => {
       await request(app)
         .post("/auth/login")
         .send({
-          email: "nosuchemail@gmail.com",
+          emailOrPhone: "nosuchemail@gmail.com",
           password: dummyUser.password,
         })
-        .expect(400);
+        .expect(400, { error: "INVALID_CREDENTIALS" });
 
       await request(app)
         .post("/auth/login")
         .send({
           phoneCountryCode: dummyUser.phoneCountryCode,
-          phone: "9916812171",
+          emailOrPhone: "9916812171",
           password: dummyUser.password,
         })
-        .expect(400);
+        .expect(400, { error: "INVALID_CREDENTIALS" });
     });
 
     it("fails if password is missing/incorrect", async () => {
       await request(app)
         .post("/auth/login")
-        .send({
-          email: dummyUser.email,
-        })
-        .expect(400);
+        .send({ emailOrPhone: dummyUser.email })
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: password/)
+        );
 
       await request(app)
         .post("/auth/login")
         .send({
-          email: dummyUser.email,
+          emailOrPhone: dummyUser.email,
           password: "incorrect",
         })
-        .expect(400);
+        .expect(400, { error: "INVALID_CREDENTIALS" });
     });
   });
 
@@ -479,13 +538,17 @@ describe("auth routes", () => {
       const b64data = Buffer.from(`${dummyUser.email}::invalidtoken`).toString(
         "base64"
       );
-      await request(app).post(`/auth/login/${b64data}`).expect(400);
+      await request(app)
+        .post(`/auth/login/${b64data}`)
+        .expect(400, { error: "INVALID_CREDENTIALS" });
     });
   });
 
   describe("logout", () => {
     it("fails if called by unauthenticated user", async () => {
-      await request(app).post("/auth/logout").expect(401);
+      await request(app)
+        .post("/auth/logout")
+        .expect(401, { error: "NOT_AUTHENTICATED" });
     });
   });
 });
@@ -504,8 +567,7 @@ describe("user routes", () => {
     agent = request.agent(app);
     await agent
       .post("/auth/login")
-      .send({ emailOrPhone: dummyUser.email, password: dummyUser.password })
-      .expect(200);
+      .send({ emailOrPhone: dummyUser.email, password: dummyUser.password });
 
     mockSendEmail.mockClear();
   });
@@ -531,10 +593,16 @@ describe("user routes", () => {
         });
     });
 
+    it("fails if requesting user is not authenticated", async () => {
+      await request(app)
+        .get(`/users/${user.id}`)
+        .expect(401, { error: "NOT_AUTHENTICATED" });
+    });
+
     it("fails if specified user does not exist", async () => {
       await userRepository.delete(user.id as number);
 
-      await agent.get(`/users/${user.id}`).expect(404);
+      await agent.get(`/users/${user.id}`).expect(404, { error: "NOT_FOUND" });
     });
 
     it("fails if logged-in user does not have permission to access requested user", async () => {
@@ -544,7 +612,9 @@ describe("user routes", () => {
         email: anotherDummyUser.email,
       });
 
-      await agent.get(`/users/${anotherUser.id}`).expect(403);
+      await agent
+        .get(`/users/${anotherUser.id}`)
+        .expect(403, { error: "NOT_AUTHORIZED" });
     });
   });
 
@@ -602,7 +672,7 @@ describe("user routes", () => {
       await request(app)
         .post(`/users/${user.id}`)
         .send({ firstName: "Ani" })
-        .expect(401);
+        .expect(401, { error: "NOT_AUTHENTICATED" });
     });
 
     it("fails if target user not found", async () => {
@@ -611,7 +681,7 @@ describe("user routes", () => {
       await agent
         .post(`/users/${user.id}`)
         .send({ firstName: "Ani" })
-        .expect(404);
+        .expect(404, { error: "NOT_FOUND" });
     });
 
     it("fails if authenticated user not authorized", async () => {
@@ -623,7 +693,7 @@ describe("user routes", () => {
       await agent
         .post(`/users/${anotherUser.id}`)
         .send({ firstName: "Vikas" })
-        .expect(403);
+        .expect(403, { error: "NOT_AUTHORIZED" });
     });
 
     // TODO: add check for invalid phoneCountryCode
@@ -631,17 +701,22 @@ describe("user routes", () => {
       await agent
         .post(`/users/${user.id}`)
         .send({ password: "short" })
-        .expect(400);
+        .expect(400)
+        .then((res) =>
+          expect(res.body.error).toMatch(/^INVALID_DATA: password/)
+        );
 
       await agent
         .post(`/users/${user.id}`)
         .send({ email: "invalid" })
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: email/));
 
       await agent
         .post(`/users/${user.id}`)
         .send({ phone: "invalid" })
-        .expect(400);
+        .expect(400)
+        .then((res) => expect(res.body.error).toMatch(/^INVALID_DATA: phone/));
     });
   });
 });

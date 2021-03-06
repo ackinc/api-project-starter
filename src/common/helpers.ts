@@ -140,7 +140,7 @@ export const emailOrPhoneSanitizer: CustomSanitizer = (value, { req }) => {
   else req.body.phone = value;
 };
 
-export const emailOrPhoneValidator: CustomValidator = (value) => {
-  if (!value) throw new Error("invalid emailOrPhone");
-  return true;
+export const emailOrPhoneValidator: CustomValidator = (value, meta) => {
+  if (isEmail(value)) return true;
+  return phoneValidator(phoneSanitizer(value), meta);
 };

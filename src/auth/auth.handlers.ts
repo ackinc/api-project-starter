@@ -133,7 +133,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
   if (data.length === 2) [email, suppliedToken] = data;
   else if (data.length === 3) [phoneCountryCode, phone, suppliedToken] = data;
   else {
-    res.status(400).json({ error: constants.TOKEN_INVALID_OR_EXPIRED });
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
@@ -142,7 +142,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
   const cacheKey = `tokens:${cacheKeySuffix}`;
   const actualToken = await cache.get(cacheKey);
   if (!actualToken || suppliedToken !== actualToken) {
-    res.status(400).json({ error: constants.TOKEN_INVALID_OR_EXPIRED });
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
