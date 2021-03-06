@@ -6,17 +6,17 @@ import { sendVerificationEmail, sendVerificationSMS } from "../common/helpers";
 import User from "../entities/User.entity";
 import { constants, frontendLocation } from "../config";
 
-export const getUser: RequestHandler = async (req, res) => {
-  const retrievableUserProperties = [
-    "id",
-    "firstName",
-    "lastName",
-    "email",
-    "phoneCountryCode",
-    "phone",
-    "profilePicUrl",
-  ];
+const retrievableUserProperties = [
+  "id",
+  "firstName",
+  "lastName",
+  "email",
+  "phoneCountryCode",
+  "phone",
+  "profilePicUrl",
+];
 
+export const getUser: RequestHandler = async (req, res) => {
   let user: User;
   try {
     user = await getRepository(User).findOneOrFail(
@@ -72,5 +72,5 @@ export const updateUser: RequestHandler = async (req, res) => {
   }
   user = await userRepository.save(user);
 
-  res.json({ data: user });
+  res.json({ data: _.pick(user, retrievableUserProperties) });
 };
