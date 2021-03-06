@@ -1,3 +1,11 @@
+### Tech Stack
+
+Language: NodeJS/Typescript
+Webserver: ExpressJS
+Database: PostgreSQL
+ORM: TypeORM
+Cache: Redis
+
 ### Getting started with development
 
 1. Clone this repo
