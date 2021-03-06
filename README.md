@@ -1,3 +1,15 @@
+# Purpose
+
+Use this repo as the starting point for all future API projects
+
+### Tech Stack
+
+Language: NodeJS/Typescript
+Webserver: ExpressJS
+Database: PostgreSQL
+ORM: TypeORM
+Cache: Redis
+
 ### Getting started with development
 
 1. Clone this repo
