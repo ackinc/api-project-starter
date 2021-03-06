@@ -4,7 +4,7 @@ import { getRepository } from "typeorm";
 
 import { sendVerificationEmail, sendVerificationSMS } from "../common/helpers";
 import User from "../entities/User.entity";
-import { frontendLocation } from "../config";
+import { constants, frontendLocation } from "../config";
 
 export const getUser: RequestHandler = async (req, res) => {
   const retrievableUserProperties = [
@@ -23,7 +23,7 @@ export const getUser: RequestHandler = async (req, res) => {
       req.session?.user?.id as number
     );
   } catch (e) {
-    return res.status(404).json({ error: "NOT_FOUND" });
+    return res.status(404).json({ error: constants.NOT_FOUND });
   }
 
   res.json({ data: _.pick(user, retrievableUserProperties) });
@@ -47,7 +47,7 @@ export const updateUser: RequestHandler = async (req, res) => {
   const userRepository = getRepository(User);
   let user = await userRepository.findOne(userId);
   if (!user) {
-    return res.status(404).json({ error: "NOT_FOUND" });
+    return res.status(404).json({ error: constants.NOT_FOUND });
   }
 
   if (firstName) user.firstName = firstName;
@@ -72,5 +72,5 @@ export const updateUser: RequestHandler = async (req, res) => {
   }
   user = await userRepository.save(user);
 
-  res.json({ message: "UPDATE_SUCCESSFUL", data: user });
+  res.json({ data: user });
 };

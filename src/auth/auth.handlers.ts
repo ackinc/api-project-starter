@@ -8,7 +8,7 @@ import {
   sendVerificationEmail,
   sendVerificationSMS,
 } from "../common/helpers";
-import { frontendLocation, passwordSaltRounds } from "../config";
+import { constants, frontendLocation, passwordSaltRounds } from "../config";
 import User from "../entities/User.entity";
 
 export const signup: RequestHandler = async (req, res, next) => {
@@ -25,14 +25,14 @@ export const signup: RequestHandler = async (req, res, next) => {
   const userRepository = getRepository(User);
   let user = await userRepository.findOne({ email });
   if (user) {
-    res.status(400).json({ error: "EMAIL_TAKEN" });
+    res.status(400).json({ error: constants.EMAIL_TAKEN });
     return;
   }
 
   if (phone && phoneCountryCode) {
     user = await userRepository.findOne({ phone, phoneCountryCode });
     if (user) {
-      res.status(400).json({ error: "PHONE_TAKEN" });
+      res.status(400).json({ error: constants.PHONE_TAKEN });
       return;
     }
   }
@@ -60,7 +60,7 @@ export const signup: RequestHandler = async (req, res, next) => {
   //   uncaughtPromiseRejection when running tests due to a module being loaded
   //   *after* all tests are run. See write-up "ry83hu"
   await sendVerificationEmail(user, frontendLocation);
-  res.json({ message: "VERIFICATION_EMAIL_SENT" });
+  res.json({ message: constants.VERIFICATION_EMAIL_SENT });
 };
 
 export const sendVerificationEmail_Handler: RequestHandler = async (
@@ -79,7 +79,7 @@ export const sendVerificationEmail_Handler: RequestHandler = async (
   const user = await userRepository.findOne({ email });
   if (user) await sendVerificationEmail(user, redirectUrl);
 
-  res.json({ message: "VERIFICATION_EMAIL_SENT" });
+  res.json({ message: constants.VERIFICATION_EMAIL_SENT });
 };
 
 export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
@@ -89,7 +89,7 @@ export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
   const user = await userRepository.findOne({ phone, phoneCountryCode });
   if (user) await sendVerificationSMS(user);
 
-  res.json({ message: "VERIFICATION_SMS_SENT" });
+  res.json({ message: constants.VERIFICATION_SMS_SENT });
 };
 
 export const loginWithPassword: RequestHandler = async (req, res) => {
@@ -101,29 +101,29 @@ export const loginWithPassword: RequestHandler = async (req, res) => {
     ...(email ? { email } : { phone, phoneCountryCode }),
   });
   if (!user) {
-    res.status(400).json({ error: "INVALID_CREDENTIALS" });
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
   if (!bcrypt.compare(hashed, user.password as string)) {
-    res.status(400).json({ error: "INVALID_CREDENTIALS" });
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
   if (email && !user.emailVerified) {
     await sendVerificationEmail(user, frontendLocation);
-    res.json({ message: "VERIFICATION_EMAIL_SENT" });
+    res.json({ message: constants.VERIFICATION_EMAIL_SENT });
     return;
   }
 
   if (phoneCountryCode && phone && !user.phoneVerified) {
     await sendVerificationSMS(user);
-    res.json({ message: "VERIFICATION_SMS_SENT" });
+    res.json({ message: constants.VERIFICATION_SMS_SENT });
     return;
   }
 
   req.session.user = user;
-  res.json({ message: "LOGIN_SUCCESSFUL" });
+  res.json({ message: constants.LOGIN_SUCCESS });
 };
 
 export const loginWithToken: RequestHandler = async (req, res) => {
@@ -134,7 +134,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
   if (data.length === 2) [email, suppliedToken] = data;
   else if (data.length === 3) [phoneCountryCode, phone, suppliedToken] = data;
   else {
-    res.status(400).json({ error: "TOKEN_INVALID_OR_EXPIRED" });
+    res.status(400).json({ error: constants.TOKEN_INVALID_OR_EXPIRED });
     return;
   }
 
@@ -143,7 +143,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
   const cacheKey = `tokens:${cacheKeySuffix}`;
   const actualToken = await cache.get(cacheKey);
   if (!actualToken || suppliedToken !== actualToken) {
-    res.status(400).json({ error: "TOKEN_INVALID_OR_EXPIRED" });
+    res.status(400).json({ error: constants.TOKEN_INVALID_OR_EXPIRED });
     return;
   }
 
@@ -154,7 +154,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
     email ? { email } : { phoneCountryCode, phone }
   );
   if (!user) {
-    res.status(500).json({ error: "SERVER_ERROR" });
+    res.status(500).json({ error: constants.SERVER_ERROR });
     return;
   }
 
@@ -172,11 +172,11 @@ export const loginWithToken: RequestHandler = async (req, res) => {
   if (redirectUrl) {
     res.status(302).redirect(fromBase64(redirectUrl as string));
   } else {
-    res.json({ message: "LOGIN_SUCCESSFUL" });
+    res.json({ message: constants.LOGIN_SUCCESS });
   }
 };
 
 export const logout: RequestHandler = (req, res) => {
   delete req.session.user;
-  res.json({ message: "LOGOUT_SUCCESSFUL" });
+  res.json({ message: constants.LOGOUT_SUCCESS });
 };
