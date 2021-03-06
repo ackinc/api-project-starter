@@ -94,7 +94,6 @@ export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
 
 export const loginWithPassword: RequestHandler = async (req, res) => {
   const { email, phoneCountryCode, phone, password } = req.body;
-  const hashed = await bcrypt.hash(password, passwordSaltRounds);
 
   const userRepository = getRepository(User);
   const user = await userRepository.findOne({
@@ -105,7 +104,7 @@ export const loginWithPassword: RequestHandler = async (req, res) => {
     return;
   }
 
-  if (!bcrypt.compare(hashed, user.password as string)) {
+  if (!(await bcrypt.compare(password, user.password as string))) {
     res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
