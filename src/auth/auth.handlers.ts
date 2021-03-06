@@ -1,15 +1,14 @@
 import bcrypt from "bcrypt";
 import type { RequestHandler } from "express";
 import { getRepository } from "typeorm";
-import validator from "validator";
 
-import * as cache from "../common/cache";
+import { getClient } from "../common/cache";
 import {
   fromBase64,
   sendVerificationEmail,
   sendVerificationSMS,
 } from "../common/helpers";
-import { frontendLocation, passwordSaltRounds } from "../config";
+import { constants, frontendLocation, passwordSaltRounds } from "../config";
 import User from "../entities/User.entity";
 
 export const signup: RequestHandler = async (req, res, next) => {
@@ -26,14 +25,14 @@ export const signup: RequestHandler = async (req, res, next) => {
   const userRepository = getRepository(User);
   let user = await userRepository.findOne({ email });
   if (user) {
-    res.status(400).json({ error: "EMAIL_TAKEN" });
+    res.status(400).json({ error: constants.EMAIL_TAKEN });
     return;
   }
 
   if (phone && phoneCountryCode) {
     user = await userRepository.findOne({ phone, phoneCountryCode });
     if (user) {
-      res.status(400).json({ error: "PHONE_TAKEN" });
+      res.status(400).json({ error: constants.PHONE_TAKEN });
       return;
     }
   }
@@ -57,17 +56,17 @@ export const signup: RequestHandler = async (req, res, next) => {
     return;
   }
 
-  res.json({ message: "VERIFICATION_LINK_SENT" });
-
-  sendVerificationEmail(user, frontendLocation);
+  // Calling `sendVerificationEmail` *after* `res.json(...)` causes an
+  //   uncaughtPromiseRejection when running tests due to a module being loaded
+  //   *after* all tests are run. See write-up "ry83hu"
+  await sendVerificationEmail(user, frontendLocation);
+  res.json({ message: constants.VERIFICATION_EMAIL_SENT });
 };
 
 export const sendVerificationEmail_Handler: RequestHandler = async (
   req,
   res
 ) => {
-  res.json({ message: "EMAIL_MAYBE_SENT" });
-
   // redirectUrl is used to tell the loginWithToken route handler
   //   where to redirect the user after token verification
   // This is useful when implementing magic sign-in
@@ -78,60 +77,52 @@ export const sendVerificationEmail_Handler: RequestHandler = async (
 
   const userRepository = getRepository(User);
   const user = await userRepository.findOne({ email });
-  if (!user) return;
+  if (user) await sendVerificationEmail(user, redirectUrl);
 
-  sendVerificationEmail(user, redirectUrl);
+  res.json({ message: constants.VERIFICATION_EMAIL_SENT });
 };
 
 export const sendVerificationSMS_Handler: RequestHandler = async (req, res) => {
-  res.json({ message: "SMS_MAYBE_SENT" });
-
   const { phoneCountryCode, phone } = req.body;
 
   const userRepository = getRepository(User);
   const user = await userRepository.findOne({ phone, phoneCountryCode });
-  if (!user) return;
+  if (user) await sendVerificationSMS(user);
 
-  sendVerificationSMS(user);
+  res.json({ message: constants.VERIFICATION_SMS_SENT });
 };
 
 export const loginWithPassword: RequestHandler = async (req, res) => {
-  const { emailOrPhone, phoneCountryCode, password } = req.body;
-  let email: string | undefined, phone: string | undefined;
-
-  if (validator.isEmail(emailOrPhone)) email = emailOrPhone as string;
-  else phone = emailOrPhone as string;
-
-  const hashed = await bcrypt.hash(password, passwordSaltRounds);
+  const { email, phoneCountryCode, phone, password } = req.body;
 
   const userRepository = getRepository(User);
   const user = await userRepository.findOne({
     ...(email ? { email } : { phone, phoneCountryCode }),
   });
   if (!user) {
-    res.status(400).json({ error: "INVALID_CREDENTIALS" });
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
-  if (!bcrypt.compare(hashed, user.password as string)) {
-    res.status(400).json({ error: "INVALID_CREDENTIALS" });
+  if (!(await bcrypt.compare(password, user.password as string))) {
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
   if (email && !user.emailVerified) {
-    res.json({ message: "VERIFICATION_EMAIL_SENT" });
-    sendVerificationEmail(user, frontendLocation);
+    await sendVerificationEmail(user, frontendLocation);
+    res.json({ message: constants.VERIFICATION_EMAIL_SENT });
     return;
   }
 
   if (phoneCountryCode && phone && !user.phoneVerified) {
-    res.json({ message: "VERIFICATION_SMS_SENT" });
-    sendVerificationSMS(user);
+    await sendVerificationSMS(user);
+    res.json({ message: constants.VERIFICATION_SMS_SENT });
     return;
   }
 
   req.session.user = user;
-  res.json({ message: "LOGIN_SUCCESSFUL" });
+  res.json({ message: constants.LOGIN_SUCCESS });
 };
 
 export const loginWithToken: RequestHandler = async (req, res) => {
@@ -142,20 +133,19 @@ export const loginWithToken: RequestHandler = async (req, res) => {
   if (data.length === 2) [email, suppliedToken] = data;
   else if (data.length === 3) [phoneCountryCode, phone, suppliedToken] = data;
   else {
-    res.status(400).json({ error: "TOKEN_INVALID_OR_EXPIRED" });
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
+  const cache = getClient();
   const cacheKeySuffix = email || `${phoneCountryCode}${phone}`;
   const cacheKey = `tokens:${cacheKeySuffix}`;
   const actualToken = await cache.get(cacheKey);
   if (!actualToken || suppliedToken !== actualToken) {
-    res.status(400).json({ error: "TOKEN_INVALID_OR_EXPIRED" });
+    res.status(400).json({ error: constants.INVALID_CREDENTIALS });
     return;
   }
 
-  // @ts-expect-error: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't
   await cache.del(cacheKey);
 
   const userRepository = getRepository(User);
@@ -163,7 +153,7 @@ export const loginWithToken: RequestHandler = async (req, res) => {
     email ? { email } : { phoneCountryCode, phone }
   );
   if (!user) {
-    res.status(400).json({ message: "TOKEN_INVALID_OR_EXPIRED" });
+    res.status(500).json({ error: constants.SERVER_ERROR });
     return;
   }
 
@@ -181,11 +171,11 @@ export const loginWithToken: RequestHandler = async (req, res) => {
   if (redirectUrl) {
     res.status(302).redirect(fromBase64(redirectUrl as string));
   } else {
-    res.json({ message: "LOGIN_SUCCESSFUL" });
+    res.json({ message: constants.LOGIN_SUCCESS });
   }
 };
 
 export const logout: RequestHandler = (req, res) => {
   delete req.session.user;
-  res.json({ message: "LOGOUT_SUCCESSFUL" });
+  res.json({ message: constants.LOGOUT_SUCCESS });
 };

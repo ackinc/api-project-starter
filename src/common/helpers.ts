@@ -1,4 +1,8 @@
-import * as cache from "./cache";
+import { CustomSanitizer, CustomValidator } from "express-validator";
+import isMobilePhone from "validator/lib/isMobilePhone";
+import isEmail from "validator/lib/isEmail";
+
+import { getClient } from "./cache";
 import sendEmail from "./email";
 import sendSMS from "./sms";
 import {
@@ -76,8 +80,7 @@ export async function sendVerificationEmail(
   const token = createEmailVerificationToken();
   const expirySeconds = emailVerificationTokenExpiryMinutes * 60;
 
-  // @ts-expect-error: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't
+  const cache = getClient();
   await cache.set(`tokens:${email}`, token, "EX", expirySeconds);
 
   const b64data = toBase64(`${email}::${token}`);
@@ -105,8 +108,7 @@ export async function sendVerificationSMS(user: User): Promise<void> {
   const code = createSMSVerificationCode();
   const expirySeconds = phoneVerificationCodeExpiryMinutes * 60;
 
-  // @ts-expect-error: Typescript should be able to see that the following
-  //   function call is valid, but it doesn't
+  const cache = getClient();
   await cache.set(`tokens:${fullPhoneNumber}`, code, "EX", expirySeconds);
 
   return sendSMS({
@@ -119,3 +121,26 @@ export async function sendVerificationSMS(user: User): Promise<void> {
 function createSMSVerificationCode() {
   return getRandomString(phoneVerificationCodeLength, { digits: true });
 }
+
+export const phoneValidator: CustomValidator = (phone, { req }) => {
+  const { phoneCountryCode } = req.body;
+  const fullPhone = `${phoneCountryCode}${phone}`;
+  if (!isMobilePhone(fullPhone, "any", { strictMode: true })) {
+    throw new Error("invalid phone");
+  }
+  return true;
+};
+
+export const phoneSanitizer = (phone: string): string | undefined =>
+  phone?.replace(/\D/g, "");
+
+export const emailOrPhoneSanitizer: CustomSanitizer = (value, { req }) => {
+  if (!value) return;
+  else if (isEmail(value)) req.body.email = value;
+  else req.body.phone = value;
+};
+
+export const emailOrPhoneValidator: CustomValidator = (value, meta) => {
+  if (isEmail(value)) return true;
+  return phoneValidator(phoneSanitizer(value), meta);
+};

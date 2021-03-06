@@ -4,24 +4,32 @@ import { getRepository } from "typeorm";
 
 import { sendVerificationEmail, sendVerificationSMS } from "../common/helpers";
 import User from "../entities/User.entity";
-import { frontendLocation } from "../config";
+import { constants, frontendLocation } from "../config";
 
-export const getUser: RequestHandler = (req, res) => {
-  const retrievableUserProperties = [
-    "firstName",
-    "lastName",
-    "email",
-    "phoneCountryCode",
-    "phone",
-    "profilePicUrl",
-  ];
+const retrievableUserProperties = [
+  "id",
+  "firstName",
+  "lastName",
+  "email",
+  "phoneCountryCode",
+  "phone",
+  "profilePicUrl",
+];
 
-  res.json({
-    data: _.pick(req.session.user, retrievableUserProperties),
-  });
+export const getUser: RequestHandler = async (req, res) => {
+  let user: User;
+  try {
+    user = await getRepository(User).findOneOrFail(
+      req.session?.user?.id as number
+    );
+  } catch (e) {
+    return res.status(404).json({ error: constants.NOT_FOUND });
+  }
+
+  res.json({ data: _.pick(user, retrievableUserProperties) });
 };
 
-export const updateUser: RequestHandler = async (req, res, next) => {
+export const updateUser: RequestHandler = async (req, res) => {
   const {
     firstName,
     lastName,
@@ -31,14 +39,15 @@ export const updateUser: RequestHandler = async (req, res, next) => {
     profilePicUrl,
   } = req.body;
 
-  const curUser = req.session.user as Record<string, unknown>;
-  const curUserId = curUser.id as number;
+  const userId: number =
+    req.params.id === "me"
+      ? (req.session?.user?.id as number)
+      : Number(req.params.id);
 
   const userRepository = getRepository(User);
-  let user = await userRepository.findOne(curUserId);
+  let user = await userRepository.findOne(userId);
   if (!user) {
-    next(new Error(`Failed to find authenticated user ${curUserId} in DB`));
-    return;
+    return res.status(404).json({ error: constants.NOT_FOUND });
   }
 
   if (firstName) user.firstName = firstName;
@@ -57,11 +66,11 @@ export const updateUser: RequestHandler = async (req, res, next) => {
     (phoneCountryCode && phoneCountryCode !== user.phoneCountryCode)
   ) {
     if (phone) user.phone = phone;
-    if (phoneCountryCode) user.phoneCountryCode = phone;
+    if (phoneCountryCode) user.phoneCountryCode = phoneCountryCode;
     user.phoneVerified = false;
     sendVerificationSMS(user);
   }
   user = await userRepository.save(user);
 
-  res.json({ message: "UPDATE_SUCCESSFUL", data: user });
+  res.json({ data: _.pick(user, retrievableUserProperties) });
 };

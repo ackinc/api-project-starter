@@ -4,7 +4,13 @@
 import express from "express";
 import { body, param } from "express-validator";
 
-import { validateRequest } from "../common/handlers";
+import { checkAuthenticated, validateRequest } from "../common/handlers";
+import {
+  emailOrPhoneSanitizer,
+  emailOrPhoneValidator,
+  phoneSanitizer,
+  phoneValidator,
+} from "../common/helpers";
 import { minPasswordLength } from "../config";
 
 import {
@@ -15,11 +21,9 @@ import {
   sendVerificationSMS_Handler,
   signup,
 } from "./auth.handlers";
-import { checkAuthenticated } from "../common/handlers";
 
 const authRouter = express.Router();
 
-// TODO: validate phoneCountryCode
 authRouter.post(
   "/signup",
   body("firstName").exists(),
@@ -30,8 +34,8 @@ authRouter.post(
     .withMessage(`must be at least ${minPasswordLength} characters`),
   body("phone")
     .optional()
-    .customSanitizer((phone) => phone.replace(/\D/g, ""))
-    .isMobilePhone("any"),
+    .customSanitizer(phoneSanitizer)
+    .custom(phoneValidator),
   validateRequest,
   signup
 );
@@ -44,13 +48,10 @@ authRouter.post(
   sendVerificationEmail_Handler
 );
 
-// TODO: validate phoneCountryCode
 authRouter.post(
   "/send_phone_verification_code",
   body("phoneCountryCode").exists(),
-  body("phone")
-    .customSanitizer((phone) => phone.replace(/\D/g, ""))
-    .isMobilePhone("any"),
+  body("phone").customSanitizer(phoneSanitizer).custom(phoneValidator),
   validateRequest,
   sendVerificationSMS_Handler
 );
@@ -64,10 +65,17 @@ authRouter.post(
   sendVerificationEmail_Handler
 );
 
-// TODO: validate phoneCountryCode
+// emailOrPhoneSanitizer populates req.body.email or req.body.phone
 authRouter.post(
   "/login",
-  body("emailOrPhone").exists(),
+  body("emailOrPhone")
+    .custom(emailOrPhoneValidator)
+    .customSanitizer(emailOrPhoneSanitizer),
+  body("email").optional().isEmail(),
+  body("phone")
+    .optional()
+    .customSanitizer(phoneSanitizer)
+    .custom(phoneValidator),
   body("password").exists(),
   validateRequest,
   loginWithPassword

@@ -1,6 +1,6 @@
 import Email from "email-templates";
 import path from "path";
-import { defaultMailFromAddress, smtpUrl } from "../config";
+import { defaultMailFromAddress, nodeEnv, smtpUrl } from "../config";
 
 const templatesDir = path.join(__dirname, "../../templates/emails");
 
@@ -12,7 +12,7 @@ interface SendEmailOptions {
 
 const email = new Email({
   message: { from: defaultMailFromAddress },
-  send: true,
+  send: !["development", "test"].includes(nodeEnv),
   transport: smtpUrl,
 });
 
@@ -22,5 +22,5 @@ export default async function sendEmail({
   locals = {},
 }: SendEmailOptions): Promise<void> {
   const templatePath = path.join(templatesDir, template);
-  email.send({ template: templatePath, message: { to }, locals });
+  return email.send({ template: templatePath, message: { to }, locals });
 }
